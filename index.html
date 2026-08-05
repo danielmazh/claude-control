@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Control</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#CC785C">
+<style>
+  :root {
+    --bg:#f7f5f1; --card:#fff; --ink:#22201d; --muted:#7a746c; --line:#e6e2da;
+    --accent:#c96442; --accent-soft:#f9ece5; --good:#177245; --good-soft:#e8f5ee;
+    --blue:#2458c5; --blue-soft:#e9effc; --code:#f1eee9; --danger:#b91c1c;
+    --shadow:0 1px 3px rgba(30,25,20,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#171614; --card:#201f1c; --ink:#ece9e2; --muted:#9c968e; --line:#343128;
+      --accent:#e0855f; --accent-soft:#33221a; --good:#4ade80; --good-soft:#132a1c;
+      --blue:#7aa5f8; --blue-soft:#1a2438; --code:#2a2823; --danger:#f87171;
+      --shadow:0 1px 3px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);
+       color:var(--ink);line-height:1.6;padding:0 1rem 4rem}
+  .wrap{max-width:880px;margin:0 auto}
+  header{display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;
+    padding:.9rem 0 .8rem;border-bottom:1px solid var(--line);margin-bottom:1.3rem;
+    position:sticky;top:0;background:var(--bg);z-index:5}
+  header img{width:29px;height:29px;border-radius:8px}
+  h1{font-size:1.18rem;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:.76rem}
+  nav{display:flex;gap:.2rem;margin-inline-start:auto}
+  nav button{font:inherit;border:none;background:none;color:var(--muted);
+    border-radius:0;padding:.5rem .85rem;cursor:pointer;font-size:.88rem;
+    border-bottom:2px solid transparent}
+  nav button:hover{color:var(--ink)}
+  nav button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+  .flag{border:1px solid transparent;background:none;font-size:1.05rem;cursor:pointer;
+    border-radius:7px;padding:.15rem .3rem;line-height:1;opacity:.45}
+  .flag.on{opacity:1;border-color:var(--line);background:var(--card)}
+  .power{border:1px solid var(--line);background:var(--card);color:var(--muted);width:30px;height:30px;
+    border-radius:8px;cursor:pointer;font-size:.9rem;line-height:1}
+  .power:hover{color:var(--danger);border-color:var(--danger)}
+  .tab{display:none} .tab.on{display:block}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);margin-bottom:1rem}
+  section>.shead{display:flex;align-items:center;gap:.55rem;padding:.7rem 1.1rem;
+    border-bottom:1px solid var(--line);flex-wrap:wrap;border-radius:12px 12px 0 0;
+    background:color-mix(in srgb,var(--card) 70%,var(--bg))}
+  section>.shead b{font-size:.92rem;letter-spacing:.01em}
+  section>.sbody{padding:.85rem 1.1rem}
+  .grid{display:grid;gap:.7rem}
+  .g3{grid-template-columns:repeat(auto-fill,minmax(272px,1fr))}
+  .g4{grid-template-columns:repeat(auto-fill,minmax(192px,1fr))}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:.8rem 1rem;box-shadow:var(--shadow)}
+  .kpi .n{font-size:1.4rem;font-weight:700;letter-spacing:-.02em}
+  .kpi .l{font-size:.73rem;color:var(--muted);display:flex;align-items:center;gap:.35rem}
+  .bar{height:6px;background:var(--code);border-radius:99px;overflow:hidden;margin-top:.45rem}
+  .bar i{display:block;height:100%;background:var(--good);border-radius:99px}
+  .bar i.warn{background:var(--accent)} .bar i.hot{background:var(--danger)}
+  .tag{font-size:.66rem;padding:.06rem .5rem;border-radius:99px;font-weight:600;white-space:nowrap}
+  .t-live{background:var(--good-soft);color:var(--good)}
+  .t-next{background:var(--accent-soft);color:var(--accent)}
+  .t-manual{background:var(--code);color:var(--muted)}
+  .t-est{background:var(--code);color:var(--muted);font-family:ui-monospace,monospace;direction:ltr}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+    padding:.55rem 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .name{font-size:.9rem;font-weight:500;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .row .hint{font-size:.74rem;color:var(--muted)}
+  .q{display:inline-flex;width:15px;height:15px;border-radius:50%;background:var(--code);
+    color:var(--muted);font-size:.6rem;font-weight:700;align-items:center;justify-content:center;
+    cursor:help;flex:none}
+  .q:hover{background:var(--ink);color:var(--bg)}
+  #tip{position:fixed;background:var(--ink);color:var(--bg);padding:.45rem .7rem;border-radius:8px;
+    font-size:.75rem;max-width:270px;line-height:1.5;z-index:100;display:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);pointer-events:none}
+  .tg{position:relative;width:38px;height:21px;flex:none;cursor:pointer}
+  .tg input{opacity:0;width:0;height:0}
+  .tg span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.18s}
+  .tg span::before{content:"";position:absolute;height:15px;width:15px;top:3px;inset-inline-start:3px;
+    background:var(--card);border-radius:50%;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .tg input:checked+span{background:var(--good)}
+  .tg input:checked+span::before{transform:translateX(-17px)}
+  [dir="ltr"] .tg input:checked+span::before{transform:translateX(17px)}
+  button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:9px;padding:.35rem .85rem;cursor:pointer;font-size:.83rem;transition:.12s}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:hover{filter:brightness(1.06);color:#fff}
+  button.bluebtn{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  button.bluebtn:hover{filter:brightness(1.06);color:#fff}
+  button.ghost{border:none;background:none;color:var(--muted);padding:.15rem .35rem}
+  button.ghost:hover{color:var(--danger)}
+  code,.cmd{font-family:"SF Mono",ui-monospace,Menlo,monospace;background:var(--code);
+    border-radius:6px;padding:.12rem .45rem;font-size:.78em;direction:ltr;unicode-bidi:embed}
+  .cmdline .cmd{display:block;overflow-x:auto;white-space:nowrap;padding:.5rem .65rem}
+  .preset{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.3rem;
+    border-inline-start:4px solid var(--line)}
+  .preset.k-generic{border-inline-start-color:var(--blue)}
+  .preset.k-custom{border-inline-start-color:var(--good)}
+  .preset .d{font-size:.78rem;color:var(--muted);flex:1}
+  .preset .a{display:flex;gap:.45rem;margin-top:.45rem;flex-wrap:wrap;align-items:center}
+  .preset .chips{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.15rem}
+  .divider{border:none;border-top:1px solid var(--line);margin:1.1rem 0}
+  .muted{color:var(--muted);font-size:.8rem}
+  .chip{font-size:.73rem;background:var(--code);border-radius:99px;padding:.14rem .6rem;direction:ltr}
+  select,input[type=text],textarea{font:inherit;background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:.34rem .6rem;font-size:.85rem}
+  input[type=text]{width:100%}
+  textarea{width:100%;min-height:180px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;direction:ltr}
+  .toast{position:fixed;bottom:1.1rem;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--bg);border-radius:99px;padding:.5rem 1.2rem;font-size:.85rem;
+    opacity:0;transition:.25s;pointer-events:none;z-index:110;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+  .toast.on{opacity:1}
+  .overlay{position:fixed;inset:0;background:rgba(15,12,10,.5);display:none;z-index:90;
+    align-items:center;justify-content:center;padding:1rem}
+  .overlay.on{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:1.25rem 1.35rem;max-width:580px;width:100%;max-height:88vh;overflow-y:auto;
+    box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .modal h3{margin-bottom:.8rem;font-size:1.02rem;display:flex;gap:.45rem;align-items:center}
+  .field{margin-bottom:.75rem}
+  .field>label{display:flex;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;gap:.35rem;align-items:center}
+  .field .exp{font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.45}
+  .bp{background:var(--blue-soft);border-inline-start:3px solid var(--blue);border-radius:8px;
+    padding:.6rem .8rem;font-size:.76rem;line-height:1.55;margin-bottom:.8rem}
+  .bp b{display:block;margin-bottom:.15rem}
+  .dd{position:relative;display:inline-block}
+  .ddbtn{display:inline-flex;align-items:center;gap:.5rem;min-width:160px;justify-content:space-between}
+  .ddbtn::after{content:"▾";font-size:.7rem;color:var(--muted)}
+  .ddpanel{position:absolute;top:calc(100% + 6px);inset-inline-start:0;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.22);
+    padding:.45rem;min-width:250px;max-height:280px;overflow-y:auto;z-index:80;display:none}
+  .dd.open .ddpanel{display:block}
+  .ddpanel label{display:flex;align-items:center;gap:.55rem;padding:.34rem .5rem;border-radius:8px;
+    cursor:pointer;font-size:.85rem}
+  .ddpanel label:hover{background:var(--code)}
+  .ddpanel .sm{font-size:.7rem;color:var(--muted);margin-inline-start:auto;direction:ltr}
+  .brow{padding:.7rem 0;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:0}
+  .brow>.bt{font-size:.8rem;font-weight:600;margin-bottom:.4rem;display:flex;gap:.4rem;align-items:center;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .brow .exp{font-size:.73rem;color:var(--muted);margin-top:.3rem;line-height:1.5}
+  th,td{text-align:start;padding:.42rem .6rem;border-bottom:1px solid var(--line);font-size:.85rem}
+  th{color:var(--muted);font-weight:600;font-size:.73rem}
+  table{width:100%;border-collapse:collapse}
+  .chart{width:100%;overflow-x:auto}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:none;border-radius:0;font-size:.78rem;padding:.28rem .8rem;color:var(--muted)}
+  .seg button.on{background:var(--ink);color:var(--bg)}
+  .guide li{font-size:.9rem;margin-bottom:.6rem}
+  .guide ol{margin:0 1.3rem .5rem}
+  .guide pre{background:var(--code);border-radius:8px;padding:.55rem .8rem;direction:ltr;
+    text-align:left;font-size:.8rem;overflow-x:auto;margin:.3rem 0 .2rem;
+    font-family:ui-monospace,Menlo,monospace}
+  pre.out{background:var(--code);border-radius:10px;padding:.7rem .9rem;direction:ltr;text-align:left;
+    font-size:.76rem;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;
+    max-height:280px;overflow-y:auto;margin-top:.5rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- header keeps a FIXED layout — it does not flip with the content language -->
+  <header dir="rtl">
+    <img src="/icon.svg" alt="">
+    <div><h1>Claude Control</h1><div class="sub" id="clock"></div></div>
+    <nav>
+      <button id="tabbtn-new" class="on" onclick="showTab('new')"></button>
+      <button id="tabbtn-manage" onclick="showTab('manage')"></button>
+      <button id="tabbtn-monitor" onclick="showTab('monitor')"></button>
+      <button id="tabbtn-guide" onclick="showTab('guide')"></button>
+    </nav>
+    <button class="flag" id="fl-he" onclick="setLang('he')" title="עברית">🇮🇱</button>
+    <button class="flag" id="fl-en" onclick="setLang('en')" title="English">🇬🇧</button>
+    <button class="power" id="powerBtn" onclick="shutdown()">⏻</button>
+  </header>
+
+  <div id="content"></div>
+</div>
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+<div id="modals"></div>
+
+<script>
+/* ═══════════ i18n ═══════════ */
+const I18N={
+he:{
+ sub:"מתלבש על ‎~/.claude · מקומי",
+ tab_new:"סשן חדש",tab_manage:"ניהול",tab_monitor:"מוניטור",tab_guide:"הוראות",
+ generic:"פרופילים גנריים",generic_tip:"אבני בניין קבועות, מהרזה ביותר ועד הכול. לא ניתנים לעריכה — שכפל לפרופיל אישי כדי להתאים.",
+ mine:"הפרופילים שלי",mine_tip:"מתחיל ריק — אתה בונה אותם. כל פרופיל: MCP, סקילים, חוקים, מודל ותיקייה.",
+ new_preset:"+ פרופיל חדש",empty_mine:"עדיין ריק — צור פרופיל חדש, או שכפל (⧉) פרופיל גנרי והתאם אותו.",
+ custom:"סשן מותאם אישית",custom_tip:"הרכבת סשן חד-פעמי מרכיבים. הפקודה נבנית חיה; אפשר לשמור את ההרכב כפרופיל.",
+ comps:"רכיבי הסשן",mcp_dd:"שרתי MCP",rules_dd:"חוקים",
+ mcp_tip:"שרתי כלים חיצוניים (Jira, דפדפן, DB…) שהסשן יטען. MCP = פרוטוקול שמחבר ל-Claude כלים חיצוניים. כלום = סשן רזה.",
+ rules_tip:"קבצי הנחיות קצרים שיוזרקו להנחיות המערכת של הסשן. ניהול — בטאב ניהול.",
+ skills:"סקילים",skills_tip:"תפריט היכולות (‎/jira, תכנון, דיבוג…). עולה ~2-3k בפתיחה; גוף הסקיל נטען רק כשמשתמשים בו.",
+ bare:"מינימלי",bare_tip:"6 כלים בסיסיים בלבד (קריאה/כתיבה/טרמינל), בלי סקילים ובלי sub-agents.",
+ comps_exp:"\"סקילים\" בלבד = הסשן הקלאסי. \"מינימלי\" גובר על הכול ונותן את הרזה ביותר.",
+ env:"סביבה",env_exp:"תיקיית העבודה של הסשן — הקלד לחיפוש ברשימת התיקיות (מתיקיית הקוד שבניהול) או הדבק נתיב. מודל ריק = ברירת המחדל.",
+ cwd_ph:"הקלד לחיפוש תיקייה או הדבק נתיב…",model_def:"מודל ברירת מחדל",
+ cmd:"פקודה",open_session:"פתח סשן",copy:"העתק",copy_cmd:"העתק פקודה",save_preset:"שמור כפרופיל",
+ est_start:"פתיחה",est_tip:"אומדן הטוקנים שהסשן יתפוס בקונטקסט מיד עם הפתיחה (כלים, סקילים, MCP, חוקים).",
+ edit:"ערוך",del:"מחק",dup:"שכפל לפרופיל שלי",
+ where:"לאן לפתוח את הסשן?",where_tip:"טאב tmux מקבל שם ממוספר אוטומטית ונגיש מכל טרמינל (כולל Antigravity) עם tmux attach. tmux = מנהל סשני טרמינל ששורדים סגירת חלון.",
+ tmux_new:"tmux · סשן חדש בשם claude",tmux_new_h:"ייווצר אם לא קיים",term_new:"חלון Terminal חדש",term_new_h:"מחוץ ל-tmux",
+ tabs_w:"טאבים",attached:"מחובר",cancel:"ביטול",open:"פתח",save:"שמירה",
+ opened_tmux:"נפתח ב-tmux",opened_term:"נפתח בטרמינל ✓",copied:"הועתק ✓",saved:"נשמר ✓",updated:"עודכן ✓",deleted:"נמחק",
+ acct:"חשבון ואבחון",acct_tip:"החשבון המחובר ל-Claude Code במכונה זו, ובדיקות תקינות — בכלים המובנים של Claude בלבד.",
+ acct_row:"חשבון מחובר",acct_none:"לא זוהה חשבון — התחבר",login:"התחברות / החלפת חשבון ↗",login_toast:"נפתח בטרמינל — המשך בדפדפן",
+ diag:"אבחון",diag_tip:"מריץ אך ורק פקודות CLI מובנות: ‏doctor, ‏version, ‏config, ‏mcp, ‏plugin — ומציג את הפלט המלא. בלי סקריפטים חיצוניים.",
+ diag_h:"‏doctor · version · config · mcp · plugin — הפלט המלא של כלי Claude עצמם",run_diag:"הרץ אבחון",running:"רץ…",
+ cc:"‏Claude Code — הגדרות",cc_tip:"נכתב ישירות ל-settings.json — אותו קובץ שהאפליקציה קוראת. מודל ופלאגינים חלים מהסשן הבא; צלילים מיידית.",
+ model_row:"מודל ברירת מחדל",model_tip:"כמו הבורר של ‎/model. הזמינות בפועל תלויה בחשבון המחובר; [1m] = חלון קונטקסט של מיליון טוקנים.",
+ sounds:"צלילי התראה",sounds_tip:"צליל בסיום סשן ובבקשת אישור. 0 טוקנים.",
+ next_session:"מהסשן הבא",immediate:"מיידי",
+ plugin_tip:"פלאגין = חבילת סקילים/hooks/agents. מופעל — כל רכיביו נטענים לכל סשן (CLI + Desktop).",
+ files:"קבצים גלובליים",files_tip:"קבצי הליבה של ‎~/.claude. עריכה כאן = עריכת הקובץ עצמו.",
+ md_h:"הנחיות גלובליות לכל סשן",md_tip:"נטען לכל סשן. קטן = זול; פרטים עדיף בחוקים או במסמכים שנקראים לפי דרישה.",
+ md_edit:"עריכת ‎~/.claude/CLAUDE.md",
+ settings_h:"מודל, פלאגינים, hooks, הרשאות",open_btn:"פתח ↗",edit_btn:"ערוך",opened_editor:"נפתח לעריכה",opened_finder:"נפתח ב-Finder",opened_browser:"נפתח בדפדפן",
+ base_dir_h:"תיקיית הבסיס כולה",
+ mcp_sec:"פרופילי MCP",mcp_sec_tip:"קבצי json — כל אחד מגדיר סט שרתי MCP שסשן יכול לטעון. עריכה — בקבצים עצמם.",
+ mcp_empty:"אין פרופילים — צור קבצי json ב-‎~/.claude/registry/mcp.",folder:"תיקייה ↗",empty_lbl:"ריק",
+ hooks:"Hooks",hooks_tip:"פקודות שההרנס מריץ אוטומטית על אירועים (פתיחת סשן, לפני/אחרי כלי…). Hook = וו-חיבור שמפעיל פקודה על אירוע. מוגדרים ב-settings.json.",
+ hooks_empty:"אין hooks מוגדרים.",edit_arrow:"ערוך ↗",
+ rules_sec:"חוקים",rules_sec_tip:"קבצי הנחיות קצרים שמוזרקים לסשן לפי בחירה. למשל: לכל משימה מורכבת — sub-agent.",
+ new_rule:"+ חוק חדש",rule_edit:"עריכה",rules_empty:"אין חוקים עדיין. חוק = קובץ הנחיות קצר שמוזרק לסשן לפי בחירה.",
+ rule_new_t:"חוק חדש",rule_name:"שם",rule_content:"תוכן (Markdown)",
+ rule_bp:"<b>Best practice — חוק טוב:</b>נושא אחד לחוק · קצר וישיר (כל החוק נטען לקונטקסט — שורות ספורות) · מנוסח כהוראה (\"לכל משימה מורכבת פתח sub-agent\") · חוק שנכון תמיד — שקול להעביר ל-CLAUDE.md; חוק מצבי (ריפו מסוים, סוג עבודה) — כאן, ומסמנים רק כשрелевונטי. אפשר לקבע חוקים לפרופיל, ואפשר לסמן ידנית בכל פתיחה.",
+ skills_sec:"סקילים",skills_sec_tip:"פעיל = בתפריט הסשנים (עלות: שם+תיאור). ארכיון = 0 טוקנים. ההעברה חלה מיידית, גם על סשנים פתוחים.",
+ search:"חיפוש…",active_c:"פעילים",archived_c:"בארכיון",skill_col:"סקיל",state_col:"מצב",active_lbl:"פעיל",archive_lbl:"ארכיון",
+ desktop:"‏Desktop / claude.ai",desktop_tip:"רכיבים שנשלטים רק בממשק של claude.ai או אפליקציית ה-Desktop — כאן כסטטוס וקיצורים.",
+ connectors:"קונקטורים של החשבון",connectors_tip:"שירותי הענן של claude.ai (דוא\"ל, יומן, קבצים…). קונקטור = חיבור חשבון לשירות חיצוני. בתוך סשן: ‎/mcp.",
+ connectors_h:"ניהול, חיפוש וחיבור חדשים — בחנות הקונקטורים",store:"חנות / ניהול ↗",
+ chat_mcp:"שרתי MCP של אפליקציית הצ'אט",chat_mcp_tip:"שרתים קבועים של אפליקציית ה-Desktop (לא של Claude Code).",open_cfg:"פתח קונפיג",
+ plugins_dir:"תיקיית הפלאגינים המקומית",
+ dashcfg:"תצורת הדשבורד",dashcfg_tip:"הגדרות של הכלי עצמו.",
+ code_dir:"תיקיית הקוד שלך",code_dir_tip:"התיקייה שבה הריפוזיטוריז. מזינה את חיפוש \"תיקיית עבודה\" בפרופילים ובבונה.",
+ save_btn:"שמור",repos_found:"זוהו {n} תיקיות",no_code_dir:"לא הוגדר — בחירת תיקייה תהיה ידנית",
+ alias_row:"קיצור הפעלה בטרמינל",alias_tip:"מוסיף ל-‎~/.zshrc את הקיצור cl-dash שמפעיל את הדשבורד מכל טרמינל.",
+ alias_installed:"מותקן ✓ — הרץ cl-dash",alias_install:"התקן alias",
+ mon_5h:"מכסת 5 שעות",mon_5h_tip:"ניצול חלון החיוב המתגלגל של 5 שעות — אותם נתונים של ‎/usage.",
+ mon_wk:"מכסה שבועית",mon_wk_tip:"ניצול המכסה השבועית — מ-‎/usage.",
+ mon_today:"היום",mon_today_tip:"סה\"כ output והודעות היום (לפי היום המקומי).",
+ mon_week:"השבוע",mon_week_tip:"סיכום 7 הימים.",msgs:"הודעות",
+ days7:"7 ימים אחרונים",days7_tip:"מרשומות ה-usage ש-Claude Code כותב בעצמו לטרנסקריפטים. מתעדכן כל 10 דקות.",
+ legend:"‏Output — טוקנים שהמודל כתב · ‏Input — טוקנים שנשלחו אליו (ללא cache) · ‏Cache — קריאה/יצירה של מטמון ההקשר · הודעות — מספר תשובות המודל",
+ by_model:"הודעות לפי מודל",by_model_tip:"כמה תשובות ענה כל מודל בשבוע האחרון.",
+ by_proj:"‏Output לפי פרויקט",by_proj_tip:"סכימת טוקני output לפי תיקיית הפרויקט של כל סשן.",
+ matrix:"חתך פרויקט × מודל",matrix_tip:"טוקני output של כל מודל בכל פרויקט, בשבוע האחרון — איפה כל מודל עבד.",
+ model_col:"מודל",proj_col:"פרויקט",
+ mon_src:"מקורות בלבד: ה-payload הרשמי של ‎/usage + רשומות הטרנסקריפט של Claude Code. בלי לוגיקות נוספות.",
+ loading:"טוען…",
+ guide_t:"הפעלה ראשונה",
+ guide:"<ol><li>התקן tmux (מנהל סשני הטרמינל שהסשנים נפתחים בו):<pre>brew install tmux</pre></li><li>הפעל את הדשבורד:<pre>python3 ~/.claude/dashboard/server.py</pre>הדפדפן ייפתח לבד. הפעלה חוזרת כשהוא כבר דולק — רק פותחת חלון. כיבוי: כפתור ⏻.</li><li>בטאב ניהול ← תצורת הדשבורד: הגדר את תיקיית הקוד שלך והתקן את קיצור <code>cl-dash</code> בלחיצה.</li></ol>",
+ off_t:"⏻ השרת כבוי",off_h:"להדלקה מחדש:",confirm_off:"לכבות את שרת הדשבורד?",confirm_del_p:"למחוק את הפרופיל?",confirm_del_r:"למחוק את {f}?",
+ err:"שגיאה: ",none:"— אין —",
+ profile_new:"פרופיל חדש",profile_edit:"עריכה: ",name_l:"שם",desc_l:"תיאור קצר",
+ ed_mcp_exp:"אילו שרתי כלים חיצוניים ייטענו לסשן. כלום = סשן רזה בלי MCP.",
+ ed_rules_exp:"הנחיות שיוזרקו אוטומטית לכל סשן מהפרופיל הזה.",
+ ed_cwd:"תיקיית עבודה",
+ ed_flags_exp:"<b>סקילים</b> — תפריט היכולות: ‏~2-3k בפתיחה, הגוף נטען רק בשימוש. <b>מינימלי</b> — 6 כלים בסיסיים, בלי סקילים ובלי sub-agents; גובר על השאר. שניהם כבויים = כלים מלאים בלי תפריט סקילים.",
+ mine_suffix:" — שלי",
+ bp_bare_n:"נקי לגמרי",bp_bare_d:"בלי סקילים, בלי MCP, בלי sub-agents — מינימום מוחלט",
+ bp_cl_n:"קלאסי + סקילים",bp_cl_d:"רזה עם כל הסקילים — ברירת מחדל יומיומית",
+ bp_mcp_n:"קלאסי + MCP מקומי",bp_mcp_d:"סקילים + כל פרופילי ה-MCP המקומיים",
+ bp_full_n:"הכול",bp_full_d:"פלאגינים + ‎.mcp.json של הפרויקט — כמו claude רגיל",
+ dow:["א'","ב'","ג'","ד'","ה'","ו'","ש'"],
+},
+en:{
+ sub:"layers over ~/.claude · local",
+ tab_new:"New Session",tab_manage:"Manage",tab_monitor:"Monitor",tab_guide:"Guide",
+ generic:"Generic profiles",generic_tip:"Fixed building blocks, from leanest to everything. Not editable — duplicate into your own profile to customize.",
+ mine:"My profiles",mine_tip:"Starts empty — you build these. Each profile: MCP, skills, rules, model and folder.",
+ new_preset:"+ New profile",empty_mine:"Empty for now — create a new profile, or duplicate (⧉) a generic one and customize.",
+ custom:"Custom session",custom_tip:"Compose a one-off session from parts. The command is built live; you can save the mix as a profile.",
+ comps:"Session components",mcp_dd:"MCP servers",rules_dd:"Rules",
+ mcp_tip:"External tool servers (Jira, browser, DB…) the session will load. MCP is the protocol that connects external tools to Claude. None = lean session.",
+ rules_tip:"Short instruction files injected into the session's system prompt. Managed in the Manage tab.",
+ skills:"Skills",skills_tip:"The capability menu (/jira, planning, debugging…). ~2-3k at start; a skill's body loads only when used.",
+ bare:"Bare",bare_tip:"Only 6 basic tools (read/write/terminal), no skills, no sub-agents.",
+ comps_exp:"\"Skills\" alone = the classic session. \"Bare\" overrides everything and gives the leanest.",
+ env:"Environment",env_exp:"The session's working directory — type to search your repos (from the code folder in Manage) or paste a path. Empty model = default.",
+ cwd_ph:"Type to search folders or paste a path…",model_def:"Default model",
+ cmd:"Command",open_session:"Open session",copy:"Copy",copy_cmd:"Copy command",save_preset:"Save as profile",
+ est_start:"start",est_tip:"Estimated tokens this session will occupy in context right at start (tools, skills, MCP, rules).",
+ edit:"Edit",del:"Delete",dup:"Duplicate to my profiles",
+ where:"Where should the session open?",where_tip:"A tmux tab gets an auto-numbered name and is reachable from any terminal (incl. Antigravity) via tmux attach. tmux = a terminal session manager that survives closed windows.",
+ tmux_new:"tmux · new session named claude",tmux_new_h:"created if missing",term_new:"New Terminal window",term_new_h:"outside tmux",
+ tabs_w:"tabs",attached:"attached",cancel:"Cancel",open:"Open",save:"Save",
+ opened_tmux:"Opened in tmux",opened_term:"Opened in Terminal ✓",copied:"Copied ✓",saved:"Saved ✓",updated:"Updated ✓",deleted:"Deleted",
+ acct:"Account & diagnostics",acct_tip:"The account signed in to Claude Code on this machine, plus health checks — using Claude's built-in tools only.",
+ acct_row:"Signed-in account",acct_none:"No account detected — sign in",login:"Sign in / switch account ↗",login_toast:"Opened in Terminal — continue in browser",
+ diag:"Diagnostics",diag_tip:"Runs only built-in CLI commands: doctor, version, config, mcp, plugin — full output shown. No external scripts.",
+ diag_h:"doctor · version · config · mcp · plugin — full output of Claude's own tools",run_diag:"Run diagnostics",running:"Running…",
+ cc:"Claude Code — settings",cc_tip:"Written straight to settings.json — the same file the app reads. Model and plugins apply from the next session; sounds immediately.",
+ model_row:"Default model",model_tip:"Mirrors the /model picker. Actual availability depends on the signed-in account; [1m] = 1M-token context window.",
+ sounds:"Notification sounds",sounds_tip:"A sound when a session finishes or asks approval. 0 tokens.",
+ next_session:"next session",immediate:"immediate",
+ plugin_tip:"A plugin bundles skills/hooks/agents. When enabled, all of it loads into every session (CLI + Desktop).",
+ files:"Global files",files_tip:"The core files of ~/.claude. Editing here edits the file itself.",
+ md_h:"Global instructions for every session",md_tip:"Loaded into every session. Small = cheap; put details in rules or on-demand docs.",
+ md_edit:"Edit ~/.claude/CLAUDE.md",
+ settings_h:"Model, plugins, hooks, permissions",open_btn:"Open ↗",edit_btn:"Edit",opened_editor:"Opened for editing",opened_finder:"Opened in Finder",opened_browser:"Opened in browser",
+ base_dir_h:"The whole base folder",
+ mcp_sec:"MCP profiles",mcp_sec_tip:"JSON files — each defines a set of MCP servers a session can load. Edit the files themselves.",
+ mcp_empty:"No profiles — create json files in ~/.claude/registry/mcp.",folder:"Folder ↗",empty_lbl:"empty",
+ hooks:"Hooks",hooks_tip:"Commands the harness runs automatically on events (session start, before/after a tool…). Defined in settings.json.",
+ hooks_empty:"No hooks configured.",edit_arrow:"Edit ↗",
+ rules_sec:"Rules",rules_sec_tip:"Short instruction files injected into a session on demand. E.g.: for any complex task — use a sub-agent.",
+ new_rule:"+ New rule",rule_edit:"Edit",rules_empty:"No rules yet. A rule is a short instruction file injected into a session when selected.",
+ rule_new_t:"New rule",rule_name:"Name",rule_content:"Content (Markdown)",
+ rule_bp:"<b>Best practice — a good rule:</b>One topic per rule · short and direct (the whole rule is loaded into context — a few lines) · phrased as an instruction (\"for any complex task, open a sub-agent\") · if it's always true — consider CLAUDE.md instead; situational rules (a specific repo, a work mode) belong here and are selected only when relevant. Rules can be pinned to a profile, or picked manually at launch.",
+ skills_sec:"Skills",skills_sec_tip:"Active = in the sessions' menu (cost: name+description). Archived = 0 tokens. Applies immediately, even to open sessions.",
+ search:"Search…",active_c:"active",archived_c:"archived",skill_col:"Skill",state_col:"State",active_lbl:"Active",archive_lbl:"Archived",
+ desktop:"Desktop / claude.ai",desktop_tip:"Components managed only in claude.ai or the Desktop app UI — shown here as status and shortcuts.",
+ connectors:"Account connectors",connectors_tip:"claude.ai cloud services (mail, calendar, files…). A connector links your account to an external service. In-session: /mcp.",
+ connectors_h:"Manage, search and connect new ones — in the connector store",store:"Store / manage ↗",
+ chat_mcp:"Chat app MCP servers",chat_mcp_tip:"Fixed servers of the Desktop chat app (not Claude Code).",open_cfg:"Open config",
+ plugins_dir:"Local plugins folder",
+ dashcfg:"Dashboard configuration",dashcfg_tip:"Settings of this tool itself.",
+ code_dir:"Your code folder",code_dir_tip:"Where your repos live. Feeds the working-folder search in profiles and the builder.",
+ save_btn:"Save",repos_found:"{n} folders detected",no_code_dir:"Not set — folder choice will be manual",
+ alias_row:"Terminal launcher shortcut",alias_tip:"Adds the cl-dash alias to ~/.zshrc so the dashboard starts from any terminal.",
+ alias_installed:"Installed ✓ — run cl-dash",alias_install:"Install alias",
+ mon_5h:"5-hour quota",mon_5h_tip:"Usage of the rolling 5-hour billing window — same data as /usage.",
+ mon_wk:"Weekly quota",mon_wk_tip:"Weekly quota usage — from /usage.",
+ mon_today:"Today",mon_today_tip:"Total output and messages today (local day).",
+ mon_week:"This week",mon_week_tip:"7-day summary.",msgs:"messages",
+ days7:"Last 7 days",days7_tip:"From the usage records Claude Code itself writes to transcripts. Refreshes every 10 minutes.",
+ legend:"Output — tokens the model wrote · Input — tokens sent to it (excl. cache) · Cache — context-cache reads/writes · Messages — model replies",
+ by_model:"Messages by model",by_model_tip:"How many replies each model produced this week.",
+ by_proj:"Output by project",by_proj_tip:"Output tokens summed by each session's project folder.",
+ matrix:"Project × model breakdown",matrix_tip:"Output tokens of each model in each project this week — where each model worked.",
+ model_col:"Model",proj_col:"Project",
+ mon_src:"Sources only: the official /usage payload + Claude Code's own transcript records. No extra logic.",
+ loading:"Loading…",
+ guide_t:"First run",
+ guide:"<ol><li>Install tmux (the terminal session manager sessions open in):<pre>brew install tmux</pre></li><li>Start the dashboard:<pre>python3 ~/.claude/dashboard/server.py</pre>The browser opens by itself. Running it again while up just opens the window. Shutdown: the ⏻ button.</li><li>In Manage → Dashboard configuration: set your code folder and install the <code>cl-dash</code> shortcut with one click.</li></ol>",
+ off_t:"⏻ Server is off",off_h:"To start again:",confirm_off:"Shut down the dashboard server?",confirm_del_p:"Delete this profile?",confirm_del_r:"Delete {f}?",
+ err:"Error: ",none:"— none —",
+ profile_new:"New profile",profile_edit:"Edit: ",name_l:"Name",desc_l:"Short description",
+ ed_mcp_exp:"Which external tool servers load into the session. None = lean, no MCP.",
+ ed_rules_exp:"Instructions injected automatically into every session from this profile.",
+ ed_cwd:"Working folder",
+ ed_flags_exp:"<b>Skills</b> — the capability menu: ~2-3k at start, bodies load on use. <b>Bare</b> — 6 basic tools, no skills, no sub-agents; overrides the rest. Both off = full tools without the skills menu.",
+ mine_suffix:" — mine",
+ bp_bare_n:"Completely clean",bp_bare_d:"No skills, no MCP, no sub-agents — absolute minimum",
+ bp_cl_n:"Classic + skills",bp_cl_d:"Lean with all skills — the everyday default",
+ bp_mcp_n:"Classic + local MCP",bp_mcp_d:"Skills + all local MCP profiles",
+ bp_full_n:"Everything",bp_full_d:"Plugins + the project's .mcp.json — like plain claude",
+ dow:["Su","Mo","Tu","We","Th","Fr","Sa"],
+}};
+let L=localStorage.getItem("cc-lang")||"he";
+const t=k=>I18N[L][k]??k;
+
+/* ═══════════ state ═══════════ */
+let S=null,M=null,pendingLaunch=null,editingId=null,editingRule=null,metric="output",activeTab="new";
+const $=id=>document.getElementById(id);
+const toast=m=>{const x=$("toast");x.textContent=m;x.classList.add("on");setTimeout(()=>x.classList.remove("on"),2200);};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtTok=n=>{n=n||0;return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e4?Math.round(n/1e3)+"K":n>=1e3?(n/1e3).toFixed(1)+"K":""+n;};
+const barCls=p=>p>=85?"hot":p>=60?"warn":"";
+const Q=(tipKey)=>`<span class="q" data-tip="${esc(t(tipKey))}">?</span>`;
+
+document.addEventListener("mouseover",e=>{
+  const q=e.target.closest(".q");const tip=$("tip");
+  if(!q){tip.style.display="none";return;}
+  tip.textContent=q.dataset.tip||"";tip.style.display="block";
+  const r=q.getBoundingClientRect(),tw=tip.offsetWidth;
+  let x=r.left+r.width/2-tw/2;x=Math.max(8,Math.min(x,innerWidth-tw-8));
+  tip.style.left=x+"px";
+  tip.style.top=(r.bottom+8+tip.offsetHeight>innerHeight?r.top-tip.offsetHeight-8:r.bottom+8)+"px";
+});
+
+async function api(path,body){
+  const r=await fetch(path,body?{method:"POST",body:JSON.stringify(body)}:{});
+  const j=await r.json();
+  if(j.error){toast(t("err")+j.error);throw j.error;}
+  if(j.state){S=j.state;renderAll();}
+  return j;
+}
+function setLang(l){
+  L=l;localStorage.setItem("cc-lang",l);
+  document.documentElement.lang=l;
+  buildStatic();tick();renderAll();
+  if(activeTab==="monitor"&&M)renderMonitor();
+}
+function showTab(tab){
+  activeTab=tab;
+  for(const x of ["new","manage","monitor","guide"]){
+    const el=$("tab-"+x);if(el)el.classList.toggle("on",x===tab);
+    $("tabbtn-"+x).classList.toggle("on",x===tab);
+  }
+  if(tab==="monitor")loadMonitor();
+}
+function shutdown(){
+  if(!confirm(t("confirm_off")))return;
+  fetch("/api/shutdown",{method:"POST",body:"{}"}).finally(()=>{
+    document.body.innerHTML=`<main style="text-align:center;padding-top:18vh;font-family:inherit">
+      <h1 style="font-size:1.3rem">${t("off_t")}</h1>
+      <p style="color:var(--muted);margin-top:.6rem">${t("off_h")} <code>python3 ~/.claude/dashboard/server.py</code></p></main>`;
+  });
+}
+function toggleDd(e,id){e.stopPropagation();
+  document.querySelectorAll(".dd").forEach(d=>{if(d.id!==id)d.classList.remove("open");});
+  $(id).classList.toggle("open");}
+document.addEventListener("click",e=>{if(!e.target.closest(".dd"))
+  document.querySelectorAll(".dd").forEach(d=>d.classList.remove("open"));});
+
+/* ═══════════ static skeleton (rebuilt on language switch) ═══════════ */
+function buildStatic(){
+  const dir=L==="he"?"rtl":"ltr";
+  $("fl-he").classList.toggle("on",L==="he");
+  $("fl-en").classList.toggle("on",L==="en");
+  for(const x of ["new","manage","monitor","guide"])$("tabbtn-"+x).textContent=t("tab_"+x);
+  const c=$("content");c.dir=dir;
+  c.innerHTML=`
+  <div class="tab ${activeTab==="new"?"on":""}" id="tab-new">
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+      <b style="color:var(--blue)">${t("generic")}</b>${Q("generic_tip")}</div>
+    <div class="grid g3" id="presetsGeneric"></div>
+    <hr class="divider">
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+      <b style="color:var(--good)">${t("mine")}</b>${Q("mine_tip")}
+      <button style="margin-inline-start:auto" onclick="editPreset(null)">${t("new_preset")}</button></div>
+    <div class="grid g3" id="presetsCustom"></div>
+    <section style="margin-top:1.2rem">
+      <div class="shead"><b>${t("custom")}</b>${Q("custom_tip")}
+        <span class="tag t-est" id="customEst" style="margin-inline-start:auto"></span></div>
+      <div class="sbody">
+        <div class="brow"><div class="bt">${t("comps")}</div>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+            <div class="dd" id="ddMcp"><button class="ddbtn" onclick="toggleDd(event,'ddMcp')">${t("mcp_dd")} · <span id="cntMcp">0</span></button>
+              <div class="ddpanel" id="pnMcp"></div></div>${Q("mcp_tip")}
+            <div class="dd" id="ddRules"><button class="ddbtn" onclick="toggleDd(event,'ddRules')">${t("rules_dd")} · <span id="cntRules">0</span></button>
+              <div class="ddpanel" id="pnRules"></div></div>${Q("rules_tip")}
+            <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
+              <input type="checkbox" id="cSkills" checked onchange="updCmd()"> ${t("skills")}</label>${Q("skills_tip")}
+            <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
+              <input type="checkbox" id="cBare" onchange="updCmd()"> ${t("bare")}</label>${Q("bare_tip")}
+          </div>
+          <div class="exp">${t("comps_exp")}</div></div>
+        <div class="brow"><div class="bt">${t("env")}</div>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+            <input type="text" id="cCwd" list="repoList" placeholder="${esc(t("cwd_ph"))}" dir="ltr"
+              style="max-width:330px" oninput="updCmd()">
+            <datalist id="repoList"></datalist>
+            <select id="cModel" onchange="updCmd()"></select></div>
+          <div class="exp">${t("env_exp")}</div></div>
+        <div class="brow"><div class="bt">${t("cmd")}</div>
+          <div class="cmdline"><span class="cmd" id="customCmd"></span></div>
+          <div style="display:flex;gap:.5rem;margin-top:.6rem">
+            <button class="primary" onclick="askTarget({custom:customSpec()})">${t("open_session")}</button>
+            <button onclick="copyCmd()">${t("copy")}</button>
+            <button onclick="saveAsPreset()">${t("save_preset")}</button></div></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab ${activeTab==="manage"?"on":""}" id="tab-manage">
+    <section><div class="shead"><b>${t("acct")}</b>${Q("acct_tip")}</div>
+      <div class="sbody" id="account"></div></section>
+    <section><div class="shead"><b>${t("cc")}</b>${Q("cc_tip")}</div>
+      <div class="sbody" id="settings"></div></section>
+    <section><div class="shead"><b>${t("files")}</b>${Q("files_tip")}</div>
+      <div class="sbody" id="files"></div></section>
+    <section><div class="shead"><b>${t("mcp_sec")}</b>${Q("mcp_sec_tip")}
+        <button style="margin-inline-start:auto" onclick="api('/api/open',{what:'mcp-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
+      <div class="sbody" id="mcpList"></div></section>
+    <section><div class="shead"><b>${t("hooks")}</b>${Q("hooks_tip")}
+        <button style="margin-inline-start:auto" onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("edit_arrow")}</button></div>
+      <div class="sbody" id="hooksList"></div></section>
+    <section><div class="shead"><b>${t("rules_sec")}</b>${Q("rules_sec_tip")}
+        <button style="margin-inline-start:auto" onclick="editRule(null)">${t("new_rule")}</button>
+        <button onclick="api('/api/open',{what:'rules-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
+      <div class="sbody" id="rulesList"></div></section>
+    <section><div class="shead"><b>${t("skills_sec")}</b>${Q("skills_sec_tip")}
+        <input type="text" id="skSearch" placeholder="${esc(t("search"))}" style="max-width:170px;margin-inline-start:auto" oninput="renderSkills()">
+        <span class="muted" id="skCount"></span></div>
+      <div class="sbody" style="max-height:420px;overflow-y:auto" id="skillsTable"></div></section>
+    <section><div class="shead"><b>${t("desktop")}</b>${Q("desktop_tip")}</div>
+      <div class="sbody" id="desktopSec"></div></section>
+    <section><div class="shead"><b>${t("dashcfg")}</b>${Q("dashcfg_tip")}</div>
+      <div class="sbody" id="dashcfg"></div></section>
+  </div>
+
+  <div class="tab ${activeTab==="monitor"?"on":""}" id="tab-monitor">
+    <div class="grid g4" id="kpis"></div>
+    <section style="margin-top:1rem">
+      <div class="shead"><b>${t("days7")}</b>${Q("days7_tip")}
+        <div class="seg" style="margin-inline-start:auto" id="metricSeg">
+          <button class="${metric==="output"?"on":""}" data-m="output" onclick="setMetric(this)">Output</button>
+          <button class="${metric==="input"?"on":""}" data-m="input" onclick="setMetric(this)">Input</button>
+          <button class="${metric==="messages"?"on":""}" data-m="messages" onclick="setMetric(this)">${t("msgs")}</button>
+          <button class="${metric==="cache"?"on":""}" data-m="cache" onclick="setMetric(this)">Cache</button></div></div>
+      <div class="sbody chart" id="chart"></div>
+      <div class="sbody muted" style="padding-top:0;font-size:.73rem">${t("legend")}</div>
+    </section>
+    <section><div class="shead"><b>${t("matrix")}</b>${Q("matrix_tip")}</div>
+      <div class="sbody" style="overflow-x:auto"><table id="tblMatrix"></table></div></section>
+    <section><div class="shead"><b>${t("by_model")}</b>${Q("by_model_tip")}</div>
+      <div class="sbody"><table id="tblModels"></table></div></section>
+    <section><div class="shead"><b>${t("by_proj")}</b>${Q("by_proj_tip")}</div>
+      <div class="sbody"><table id="tblProjects"></table></div></section>
+    <p class="muted">${t("mon_src")}</p>
+  </div>
+
+  <div class="tab ${activeTab==="guide"?"on":""}" id="tab-guide">
+    <section><div class="shead"><b>${t("guide_t")}</b></div>
+      <div class="sbody guide">${t("guide")}</div></section>
+  </div>`;
+
+  $("modals").innerHTML=`
+  <div class="overlay" id="ovEdit" dir="${dir}"><div class="modal">
+    <h3 id="edTitle"></h3>
+    <div class="field"><label>${t("name_l")}</label><input type="text" id="edName"></div>
+    <div class="field"><label>${t("desc_l")}</label><input type="text" id="edDesc"></div>
+    <div class="field"><label>${t("mcp_dd")}</label><div id="edProfiles" style="display:flex;flex-wrap:wrap;gap:.4rem"></div>
+      <div class="exp">${t("ed_mcp_exp")}</div></div>
+    <div class="field"><label>${t("rules_dd")}</label><div id="edRules" style="display:flex;flex-wrap:wrap;gap:.4rem"></div>
+      <div class="exp">${t("ed_rules_exp")}</div></div>
+    <div class="field"><label>${t("ed_cwd")}</label>
+      <input type="text" id="edCwd" list="repoList" dir="ltr" placeholder="${esc(t("cwd_ph"))}"></div>
+    <div class="field">
+      <div style="display:flex;gap:1.3rem;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
+          <input type="checkbox" id="edSkills" checked> ${t("skills")}</label>
+        <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
+          <input type="checkbox" id="edBare"> ${t("bare")}</label>
+        <select id="edModel"></select></div>
+      <div class="exp">${t("ed_flags_exp")}</div></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button onclick="closeOv('ovEdit')">${t("cancel")}</button>
+      <button class="primary" onclick="savePreset()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovRule" dir="${dir}"><div class="modal">
+    <h3 id="ruleTitle"></h3>
+    <div class="bp">${t("rule_bp")}</div>
+    <div class="field"><label>${t("rule_name")}</label><input type="text" id="ruleName" placeholder="sub-agents-first"></div>
+    <div class="field"><label>${t("rule_content")}</label><textarea id="ruleContent"></textarea></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button onclick="closeOv('ovRule')">${t("cancel")}</button>
+      <button class="primary" onclick="saveRule()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovMd" dir="${dir}"><div class="modal" style="max-width:720px">
+    <h3>${t("md_edit")}</h3>
+    <textarea id="mdContent" style="min-height:320px"></textarea>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.7rem">
+      <button onclick="closeOv('ovMd')">${t("cancel")}</button>
+      <button class="primary" onclick="saveMd()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovTarget" dir="${dir}"><div class="modal">
+    <h3>${t("where")} ${Q("where_tip")}</h3>
+    <div id="targetList"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.7rem">
+      <button onclick="closeOv('ovTarget')">${t("cancel")}</button>
+      <button class="primary" onclick="doLaunch()">${t("open")}</button></div>
+  </div></div>`;
+}
+
+/* ═══════════ renders ═══════════ */
+function renderAll(){
+  if(!S)return;
+  const keepMcp=getChecked("pf"),keepRules=getChecked("rl"),
+        keepCwd=$("cCwd")?.value||"",keepModel=$("cModel")?.value||"",
+        keepSkills=$("cSkills")?.checked??true,keepBare=$("cBare")?.checked??false;
+  renderPresets();
+  ddPanel($("pnMcp"),"pf",S.mcp_profiles.filter(p=>p.file!=="none.json")
+    .map(p=>({v:p.file,l:p.file.replace(".json",""),h:p.servers.join(", ")})),keepMcp);
+  ddPanel($("pnRules"),"rl",S.rules.map(r=>({v:r.file,l:r.file.replace(/\.mdc?$/,""),h:`~${r.tokens}k`})),keepRules);
+  $("repoList").innerHTML=(S.repos||[]).map(r=>`<option value="${esc(r)}">`).join("");
+  const mopts=`<option value="">${t("model_def")}</option>`+S.models.map(m=>`<option value="${m}">${m}</option>`).join("");
+  $("cModel").innerHTML=mopts;$("edModel").innerHTML=mopts;
+  $("cCwd").value=keepCwd;$("cModel").value=keepModel;
+  $("cSkills").checked=keepSkills;$("cBare").checked=keepBare;
+  updCmd();
+  renderAccount();renderSettings();renderFiles();renderMcp();renderHooks();
+  renderRules();renderSkills();renderDesktop();renderDashCfg();
+}
+function presetCard(p){
+  const name=p.custom?p.name:(I18N[L]["bp_"+p.id+"_n"]||p.name);
+  const desc=p.custom?(p.desc||""):(I18N[L]["bp_"+p.id+"_d"]||p.desc||"");
+  const chips=[
+    ...(p.profiles===null?["plugins+project"]:(p.profiles||[]).map(x=>x.replace(".json",""))),
+    p.bare?"bare":null,p.skills&&!p.bare?"skills":null,p.model||null,
+    ...(p.rules||[]).map(r=>r.replace(/\.mdc?$/,""))].filter(Boolean);
+  return `<div class="preset k-${p.kind==="custom"?"custom":"generic"}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.4rem">
+      <b>${esc(name)}</b>
+      <span style="display:flex;gap:.15rem;align-items:center">
+        <span class="tag t-est q" data-tip="${esc(t("est_tip"))}">~${p.est}k</span>
+        ${p.custom?`<button class="ghost" title="${t("edit")}" onclick="editPreset('${p.id}')">✎</button>
+                    <button class="ghost" title="${t("del")}" onclick="delPreset('${p.id}')">✕</button>`
+                  :`<button class="ghost" title="${t("dup")}" onclick="dupPreset('${p.id}')">⧉</button>`}
+      </span></div>
+    <div class="d">${esc(desc)}${p.cwd?` · <span class="cmd">${esc(p.cwd)}</span>`:""}</div>
+    <div class="chips">${chips.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
+    <div class="a">
+      <button class="${p.kind==="custom"?"primary":"bluebtn"}" onclick="askTarget({preset:'${p.id}'})">${t("open_session")}</button>
+      <button onclick="copyPreset('${p.id}')">${t("copy_cmd")}</button></div></div>`;
+}
+function renderPresets(){
+  $("presetsGeneric").innerHTML=S.presets.filter(p=>!p.custom).map(presetCard).join("");
+  $("presetsCustom").innerHTML=S.presets.filter(p=>p.custom).map(presetCard).join("")
+    ||`<div class="muted" style="padding:.4rem 0">${t("empty_mine")}</div>`;
+}
+function ddPanel(el,name,items,selected){
+  el.innerHTML=items.length?items.map(i=>`
+    <label><input type="checkbox" name="${name}" value="${i.v}" ${selected.includes(i.v)?"checked":""}
+      onchange="updCmd()"> ${esc(i.l)}<span class="sm">${esc(i.h||"")}</span></label>`).join("")
+    :`<div class="muted" style="padding:.3rem .5rem">${t("none")}</div>`;
+}
+const getChecked=n=>[...document.querySelectorAll(`input[name=${n}]:checked`)].map(i=>i.value);
+function customSpec(){
+  return {profiles:getChecked("pf"),rules:getChecked("rl"),skills:$("cSkills").checked,
+          bare:$("cBare").checked,cwd:$("cCwd").value.trim(),model:$("cModel").value};
+}
+let cmdTimer=null;
+function updCmd(){
+  $("cntMcp").textContent=getChecked("pf").length;
+  $("cntRules").textContent=getChecked("rl").length;
+  clearTimeout(cmdTimer);
+  cmdTimer=setTimeout(async()=>{
+    const r=await fetch("/api/launch",{method:"POST",
+      body:JSON.stringify({custom:customSpec(),target:{type:"terminal"},dry:true})});
+    const j=await r.json();
+    if(j.cmd){$("customCmd").textContent=j.cmd;$("customCmd").dataset.full=j.cmd;
+      $("customEst").textContent=`~${j.est}k ${t("est_start")}`;}
+  },150);
+}
+function copyCmd(){navigator.clipboard.writeText($("customCmd").dataset.full||"").then(()=>toast(t("copied")));}
+function copyPreset(id){const p=S.presets.find(x=>x.id===id);
+  if(p)navigator.clipboard.writeText(p.cmd).then(()=>toast(t("copied")));}
+
+function chipChecks(el,name,items,selected){
+  el.innerHTML=items.length?items.map(i=>`
+    <label class="chip" style="cursor:pointer"><input type="checkbox" name="${name}" value="${i.v}"
+      ${selected.includes(i.v)?"checked":""} style="vertical-align:middle"> ${esc(i.l)}</label>`).join("")
+    :`<span class="muted">${t("none")}</span>`;
+}
+function editPreset(id){
+  editingId=id;
+  const p=id?S.presets.find(x=>x.id===id):null;
+  $("edTitle").textContent=p?t("profile_edit")+p.name:t("profile_new");
+  $("edName").value=p?p.name:"";$("edDesc").value=p?(p.desc||""):"";
+  $("edSkills").checked=p?p.skills!==false:true;$("edBare").checked=p?!!p.bare:false;
+  $("edModel").value=p?(p.model||""):"";$("edCwd").value=p?(p.cwd||""):"";
+  chipChecks($("edProfiles"),"edpf",S.mcp_profiles.filter(x=>x.file!=="none.json")
+    .map(x=>({v:x.file,l:x.file.replace(".json","")})),p?(p.profiles||[]):[]);
+  chipChecks($("edRules"),"edrl",S.rules.map(r=>({v:r.file,l:r.file.replace(/\.mdc?$/,"")})),p?(p.rules||[]):[]);
+  $("ovEdit").classList.add("on");
+}
+function dupPreset(id){
+  const p=S.presets.find(x=>x.id===id);if(!p)return;
+  editPreset(null);
+  $("edName").value=p.name+t("mine_suffix");$("edDesc").value=p.desc||"";
+  $("edSkills").checked=p.skills!==false;$("edBare").checked=!!p.bare;
+  [...document.querySelectorAll("input[name=edpf]")].forEach(i=>i.checked=(p.profiles||[]).includes(i.value));
+}
+function savePreset(){
+  api("/api/preset",{id:editingId,name:$("edName").value,desc:$("edDesc").value,
+    profiles:getChecked("edpf"),rules:getChecked("edrl"),
+    skills:$("edSkills").checked,bare:$("edBare").checked,
+    cwd:$("edCwd").value.trim(),model:$("edModel").value})
+  .then(()=>{closeOv("ovEdit");toast(t("saved"));});
+}
+function delPreset(id){if(confirm(t("confirm_del_p")))api("/api/preset/delete",{id}).then(()=>toast(t("deleted")));}
+function saveAsPreset(){
+  const c=customSpec();editPreset(null);
+  $("edName").value=t("profile_new");
+  [...document.querySelectorAll("input[name=edpf]")].forEach(i=>i.checked=c.profiles.includes(i.value));
+  [...document.querySelectorAll("input[name=edrl]")].forEach(i=>i.checked=c.rules.includes(i.value));
+  $("edSkills").checked=c.skills;$("edBare").checked=c.bare;
+  $("edModel").value=c.model;$("edCwd").value=c.cwd;
+}
+function closeOv(id){$(id).classList.remove("on");if(id==="ovEdit")editingId=null;if(id==="ovRule")editingRule=null;}
+
+function askTarget(what){
+  pendingLaunch=what;
+  const saved=localStorage.getItem("cc-target")||"";
+  const opts=[
+    ...S.tmux.map(s=>({v:"tmux:"+s.name,l:`tmux · ${s.name}`,h:`${s.windows} ${t("tabs_w")}${s.attached?" · "+t("attached"):""}`})),
+    ...(S.tmux_available?[{v:"tmux:__new__",l:t("tmux_new"),h:t("tmux_new_h")}]:[]),
+    {v:"terminal",l:t("term_new"),h:t("term_new_h")}];
+  $("targetList").innerHTML=opts.map((o,i)=>`
+    <label class="row" style="cursor:pointer">
+      <div><div class="name">${esc(o.l)}</div><div class="hint">${esc(o.h)}</div></div>
+      <input type="radio" name="tgt" value="${o.v}" ${o.v===saved||(!saved&&i===0)?"checked":""}></label>`).join("");
+  $("ovTarget").classList.add("on");
+}
+function doLaunch(){
+  const v=(document.querySelector("input[name=tgt]:checked")||{}).value||"terminal";
+  localStorage.setItem("cc-target",v);
+  const target=v.startsWith("tmux:")?{type:"tmux",session:v.slice(5)}:{type:"terminal"};
+  api("/api/launch",{...pendingLaunch,target}).then(j=>{
+    closeOv("ovTarget");
+    toast(j.tmux?`${t("opened_tmux")} ${j.tmux} ✓`:t("opened_term"));
+  });
+}
+
+/* manage renders */
+function renderAccount(){
+  const a=S.account;
+  $("account").innerHTML=`
+    <div class="row"><div><div class="name">${t("acct_row")}</div>
+      <div class="hint">${a.email?esc(a.email)+(a.org?" · "+esc(a.org):""):t("acct_none")}</div></div>
+      <button onclick="api('/api/login',{}).then(()=>toast(t('login_toast')))">${t("login")}</button></div>
+    <div class="row"><div><div class="name">${t("diag")} ${Q("diag_tip")}</div>
+      <div class="hint">${t("diag_h")}</div></div>
+      <button onclick="runDoctor(this)">${t("run_diag")}</button></div>
+    <div id="doctorOut"></div>`;
+}
+async function runDoctor(btn){
+  btn.disabled=true;btn.textContent=t("running");
+  try{
+    const r=await fetch("/api/doctor");const j=await r.json();
+    $("doctorOut").innerHTML=j.checks.map(c=>
+      `<div class="muted" style="margin-top:.5rem;direction:ltr;text-align:left">$ ${esc(c.cmd)}</div><pre class="out">${esc(c.output)}</pre>`).join("");
+  }finally{btn.disabled=false;btn.textContent=t("run_diag");}
+}
+function renderSettings(){
+  $("settings").innerHTML=`
+    <div class="row"><div><div class="name">${t("model_row")} ${Q("model_tip")}</div></div>
+      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-next">${t("next_session")}</span>
+      <select onchange="api('/api/model',{model:this.value}).then(()=>toast(t('saved')))">
+        ${S.models.map(m=>`<option value="${m}" ${S.model===m?"selected":""}>${m}</option>`).join("")}</select></div></div>
+    <div class="row"><div><div class="name">${t("sounds")} ${Q("sounds_tip")}</div></div>
+      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-live">${t("immediate")}</span>
+      <label class="tg"><input type="checkbox" ${S.sounds?"checked":""}
+        onchange="api('/api/sounds',{enabled:this.checked}).then(()=>toast(t('updated')))"><span></span></label></div></div>
+    ${S.plugins.map(p=>`
+    <div class="row"><div><div class="name">${esc(p.name.split("@")[0])} ${Q("plugin_tip")}</div>
+      <div class="hint">${esc(p.name.split("@")[1]||"")}</div></div>
+      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-next">${t("next_session")}</span>
+      <label class="tg"><input type="checkbox" ${p.enabled?"checked":""}
+        onchange="api('/api/plugin',{name:'${p.name}',enabled:this.checked}).then(()=>toast(t('saved')))"><span></span></label></div></div>`).join("")}`;
+}
+function renderFiles(){
+  $("files").innerHTML=`
+    <div class="row"><div><div class="name"><span class="cmd">~/.claude/CLAUDE.md</span>
+        ${Q("md_tip")}<span class="tag t-est">~${S.claude_md.tokens}k</span></div>
+      <div class="hint">${t("md_h")}</div></div>
+      <button onclick="editMd()">${t("edit_btn")}</button></div>
+    <div class="row"><div><div class="name"><span class="cmd">settings.json</span></div>
+      <div class="hint">${t("settings_h")}</div></div>
+      <button onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("open_btn")}</button></div>
+    <div class="row"><div><div class="name"><span class="cmd">~/.claude</span></div>
+      <div class="hint">${t("base_dir_h")}</div></div>
+      <button onclick="api('/api/open',{what:'claude-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button></div>`;
+}
+function editMd(){api("/api/claude-md/get",{}).then(j=>{$("mdContent").value=j.content;$("ovMd").classList.add("on");});}
+function saveMd(){api("/api/claude-md/save",{content:$("mdContent").value}).then(()=>{closeOv("ovMd");toast(t("saved"));});}
+function renderMcp(){
+  $("mcpList").innerHTML=S.mcp_profiles.length?S.mcp_profiles.map(p=>`
+    <div class="row"><div><div class="name"><span class="cmd">${esc(p.file)}</span></div>
+      <div class="hint">${p.servers.length?esc(p.servers.join(" · ")):t("empty_lbl")}</div></div></div>`).join("")
+    :`<div class="muted">${t("mcp_empty")}</div>`;
+}
+function renderHooks(){
+  $("hooksList").innerHTML=S.hooks.length?S.hooks.map(h=>`
+    <div class="row"><div class="name"><span class="cmd">${esc(h.event)}</span></div>
+      <span class="muted">${h.count} hooks</span></div>`).join("")
+    :`<div class="muted">${t("hooks_empty")}</div>`;
+}
+function renderRules(){
+  $("rulesList").innerHTML=S.rules.length?S.rules.map(r=>`
+    <div class="row"><div><div class="name">${esc(r.file.replace(/\.mdc?$/,""))}
+        <span class="tag t-est">~${r.tokens}k</span></div>
+      <div class="hint">${esc(r.title)}</div></div>
+      <div style="display:flex;gap:.3rem">
+        <button onclick="editRule('${r.file}')">${t("edit_btn")}</button>
+        <button class="ghost" onclick="delRule('${r.file}')">✕</button></div></div>`).join("")
+    :`<div class="muted">${t("rules_empty")}</div>`;
+}
+function editRule(file){
+  editingRule=file;
+  $("ruleTitle").textContent=file?t("rule_edit")+": "+file:t("rule_new_t");
+  $("ruleName").value=file?file.replace(/\.mdc?$/,""):"";
+  $("ruleName").disabled=!!file;
+  $("ruleContent").value="";
+  if(file)api("/api/rule/get",{file}).then(j=>$("ruleContent").value=j.content);
+  $("ovRule").classList.add("on");
+}
+function saveRule(){
+  api("/api/rule",{file:editingRule,name:$("ruleName").value,content:$("ruleContent").value})
+    .then(()=>{closeOv("ovRule");toast(t("saved"));});
+}
+function delRule(file){if(confirm(t("confirm_del_r").replace("{f}",file)))api("/api/rule/delete",{file}).then(()=>toast(t("deleted")));}
+function renderSkills(){
+  const q=($("skSearch").value||"").toLowerCase();
+  const rows=[...S.skills.active.map(n=>({n,on:true})),...S.skills.archive.map(n=>({n,on:false}))]
+    .filter(r=>r.n.toLowerCase().includes(q))
+    .sort((a,b)=>(b.on-a.on)||a.n.localeCompare(b.n));
+  $("skCount").textContent=`${S.skills.active.length} ${t("active_c")} · ${S.skills.archive.length} ${t("archived_c")}`;
+  $("skillsTable").innerHTML=`<table><tr><th>${t("skill_col")}</th><th style="width:120px">${t("state_col")}</th></tr>`+
+    rows.map(r=>`<tr><td class="cmd" style="background:none">${esc(r.n)}</td>
+      <td><div style="display:flex;gap:.45rem;align-items:center">
+        <label class="tg"><input type="checkbox" ${r.on?"checked":""}
+          onchange="api('/api/skill',{name:'${r.n}',action:this.checked?'activate':'archive'}).then(()=>toast(t('updated')))"><span></span></label>
+        <span class="hint">${r.on?t("active_lbl"):t("archive_lbl")}</span></div></td></tr>`).join("")+`</table>`;
+}
+function renderDesktop(){
+  const d=S.desktop;
+  $("desktopSec").innerHTML=`
+    <div class="row"><div><div class="name">${t("connectors")} ${Q("connectors_tip")}</div>
+      <div class="hint">${t("connectors_h")}</div></div>
+      <button onclick="api('/api/open',{what:'connectors'}).then(()=>toast(t('opened_browser')))">${t("store")}</button></div>
+    ${d.exists?`<div class="row"><div><div class="name">${t("chat_mcp")} ${Q("chat_mcp_tip")}</div>
+      <div class="hint">${d.mcp_servers.map(s=>esc(s.name)).join(" · ")||"—"}</div></div>
+      <button onclick="api('/api/open',{what:'desktop-config'}).then(()=>toast(t('opened_editor')))">${t("open_cfg")}</button></div>`:""}
+    <div class="row"><div><div class="name">${t("plugins_dir")}</div>
+      <div class="hint"><span class="cmd">~/.claude/plugins</span></div></div>
+      <button onclick="api('/api/open',{what:'plugins-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button></div>`;
+}
+function renderDashCfg(){
+  $("dashcfg").innerHTML=`
+    <div class="row"><div style="flex:1"><div class="name">${t("code_dir")} ${Q("code_dir_tip")}</div>
+      <div style="display:flex;gap:.5rem;margin-top:.3rem;max-width:430px">
+        <input type="text" id="cfgCode" dir="ltr" value="${esc(S.config.code_dir||"")}" placeholder="~/projects">
+        <button onclick="api('/api/config',{code_dir:$('cfgCode').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
+      <div class="hint" style="margin-top:.3rem">${(S.repos||[]).length?t("repos_found").replace("{n}",(S.repos||[]).length):t("no_code_dir")}</div></div></div>
+    <div class="row"><div><div class="name">${t("alias_row")} ${Q("alias_tip")}</div>
+      <div class="hint"><span class="cmd">alias cl-dash='python3 ~/.claude/dashboard/server.py'</span></div></div>
+      ${S.alias_installed?`<span class="tag t-live">${t("alias_installed")}</span>`
+        :`<button class="primary" onclick="api('/api/install-alias',{}).then(()=>toast(t('saved')))">${t("alias_install")}</button>`}</div>`;
+}
+
+/* monitor */
+function setMetric(btn){
+  metric=btn.dataset.m;
+  document.querySelectorAll("#metricSeg button").forEach(b=>b.classList.toggle("on",b===btn));
+  drawChart();
+}
+async function loadMonitor(){
+  $("chart").innerHTML=`<div class="muted">${t("loading")}</div>`;
+  const r=await fetch("/api/monitor");M=await r.json();
+  renderMonitor();
+}
+function renderMonitor(){
+  if(!M)return;
+  const lim=M.limits||{};
+  const ses=Math.floor(lim.five_hour?.utilization??0),wk=Math.floor(lim.seven_day?.utilization??0);
+  const today=M.days[M.days.length-1]||{},w=M.week||{};
+  $("kpis").innerHTML=`
+    <div class="kpi"><div class="l">${t("mon_5h")} ${Q("mon_5h_tip")}</div>
+      <div class="n">${ses}%</div><div class="bar"><i class="${barCls(ses)}" style="width:${ses}%"></i></div></div>
+    <div class="kpi"><div class="l">${t("mon_wk")} ${Q("mon_wk_tip")}</div>
+      <div class="n">${wk}%</div><div class="bar"><i class="${barCls(wk)}" style="width:${wk}%"></i></div></div>
+    <div class="kpi"><div class="l">${t("mon_today")} ${Q("mon_today_tip")}</div>
+      <div class="n">${fmtTok(today.output)}</div><div class="l">${today.messages||0} ${t("msgs")}</div></div>
+    <div class="kpi"><div class="l">${t("mon_week")} ${Q("mon_week_tip")}</div>
+      <div class="n">${fmtTok(w.output)}</div><div class="l">${w.messages||0} ${t("msgs")} · ${fmtTok(w.cache)} cache</div></div>`;
+  drawChart();
+  const mx1=M.models[0]?.[1]||1,mx2=M.projects[0]?.[1]||1;
+  $("tblModels").innerHTML=`<tr><th>${t("model_col")}</th><th>${t("msgs")}</th><th style='width:45%'></th></tr>`+
+    (M.models.map(([m,c])=>`<tr><td class="cmd" style="background:none">${esc(m)}</td><td>${c}</td>
+      <td><div class="bar"><i style="width:${Math.round(c/mx1*100)}%;background:var(--blue)"></i></div></td></tr>`).join("")||"<tr><td>—</td></tr>");
+  $("tblProjects").innerHTML=`<tr><th>${t("proj_col")}</th><th>Output</th><th style='width:45%'></th></tr>`+
+    (M.projects.map(([p,c])=>`<tr><td class="cmd" style="background:none">${esc(p)}</td><td>${fmtTok(c)}</td>
+      <td><div class="bar"><i style="width:${Math.round(c/mx2*100)}%;background:var(--accent)"></i></div></td></tr>`).join("")||"<tr><td>—</td></tr>");
+  const mt=M.matrix||{projects:[],models:[],cells:{}};
+  $("tblMatrix").innerHTML=`<tr><th>${t("proj_col")}</th>${mt.models.map(m=>`<th class="cmd" style="background:none">${esc(m)}</th>`).join("")}</tr>`+
+    (mt.projects.map(p=>`<tr><td class="cmd" style="background:none">${esc(p)}</td>
+      ${mt.models.map(m=>{const v=mt.cells[p]?.[m]||0;
+        return `<td style="${v?"":"color:var(--muted)"}">${v?fmtTok(v):"·"}</td>`;}).join("")}</tr>`).join("")||"<tr><td>—</td></tr>");
+}
+function drawChart(){
+  if(!M)return;
+  const days=M.days,vals=days.map(d=>d[metric]||0),mx=Math.max(...vals,1);
+  const W=680,H=180,P=44,bw=Math.floor((W-P)/days.length)-14;
+  const fmt=metric==="messages"?(v=>v):fmtTok;
+  let grid="";
+  for(let i=0;i<=3;i++){const y=H-Math.round(H*i/3);
+    grid+=`<line x1="${P}" y1="${y}" x2="${W}" y2="${y}" stroke="var(--line)" stroke-width="1"/>
+      <text x="${P-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmt(Math.round(mx*i/3))}</text>`;}
+  $("chart").innerHTML=`<svg viewBox="0 -18 ${W} ${H+52}" style="width:100%;direction:ltr">
+    ${grid}
+    ${days.map((d,i)=>{const v=d[metric]||0,h=Math.round(v/mx*H)||1,x=P+i*(bw+14)+7;
+      const last=i===days.length-1;
+      return `<g><title>${d.date} · ${fmt(v)}</title>
+        <rect x="${x}" y="${H-h}" width="${bw}" height="${h}" rx="6"
+          fill="${last?"var(--accent)":"var(--blue)"}" opacity="${last?1:.75}"/>
+        <text x="${x+bw/2}" y="${H-h-6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">${fmt(v)}</text>
+        <text x="${x+bw/2}" y="${H+18}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.date.slice(5).replace("-","/")}</text>
+        <text x="${x+bw/2}" y="${H+32}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${t("dow")[new Date(d.date).getDay()]}</text></g>`;}).join("")}
+  </svg>`;
+}
+
+function tick(){$("clock").textContent=t("sub")+" · "+new Date().toLocaleTimeString(L==="he"?"he-IL":"en-GB",{hour:"2-digit",minute:"2-digit"});}
+buildStatic();tick();setInterval(tick,30000);
+api("/api/state").then(j=>{S=j;renderAll();});
+</script>
+</body>
+</html>
