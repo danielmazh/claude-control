@@ -341,13 +341,36 @@ def claude_version():
 
 
 def claude_update():
-    """Upgrade via Claude's own built-in updater."""
-    r = subprocess.run(["claude", "update"], capture_output=True, text=True,
-                       timeout=300, stdin=subprocess.DEVNULL,
-                       env={**os.environ, "TERM": "dumb", "NO_COLOR": "1"})
+    """Upgrade via Claude's own built-in updater; on the known npm-global
+    failure (stale .claude-code-* temp dir blocks the rename), clean it and
+    retry with the npm that lives next to the claude binary itself."""
+    env = {**os.environ, "TERM": "dumb", "NO_COLOR": "1"}
+
+    def run(args, timeout=300):
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                           stdin=subprocess.DEVNULL, env=env)
+        txt = (r.stdout or "") + (("\n" + r.stderr) if r.stderr.strip() else "")
+        return r.returncode, txt.strip()
+
+    rc, out = run(["claude", "update"])
+    log = [f"$ claude update\n{out or '(no output)'}"]
+
+    if rc != 0 or "Failed to install" in out:
+        claude_bin = shutil.which("claude") or ""
+        real = os.path.realpath(claude_bin)
+        m = re.search(r"(.+/lib/node_modules)/@anthropic-ai/claude-code/", real)
+        if m:
+            scope = Path(m.group(1)) / "@anthropic-ai"
+            for d in scope.glob(".claude-code-*"):
+                shutil.rmtree(d, ignore_errors=True)
+                log.append(f"(removed stale npm leftover: {d.name})")
+            npm = Path(claude_bin).parent / "npm"
+            npm_cmd = str(npm) if npm.exists() else "npm"
+            rc2, out2 = run([npm_cmd, "install", "-g", "@anthropic-ai/claude-code@latest"])
+            log.append(f"$ {npm_cmd} install -g @anthropic-ai/claude-code@latest\n{out2}")
+
     _VER["v"] = None                                  # re-read version next time
-    txt = (r.stdout or "") + (("\n" + r.stderr) if r.stderr.strip() else "")
-    return txt.strip()[:6000] or "(no output)"
+    return "\n\n".join(log)[:6000]
 
 
 def remote_control(target):
