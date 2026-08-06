@@ -326,6 +326,52 @@ def local_ip():
     return ""
 
 
+_VER = {"v": None}
+
+
+def claude_version():
+    if _VER["v"] is None:
+        try:
+            r = subprocess.run(["claude", "--version"], capture_output=True,
+                               text=True, timeout=15)
+            _VER["v"] = (r.stdout or "").strip().split()[0] or "?"
+        except Exception:
+            _VER["v"] = "?"
+    return _VER["v"]
+
+
+def claude_update():
+    """Upgrade via Claude's own built-in updater."""
+    r = subprocess.run(["claude", "update"], capture_output=True, text=True,
+                       timeout=300, stdin=subprocess.DEVNULL,
+                       env={**os.environ, "TERM": "dumb", "NO_COLOR": "1"})
+    _VER["v"] = None                                  # re-read version next time
+    txt = (r.stdout or "") + (("\n" + r.stderr) if r.stderr.strip() else "")
+    return txt.strip()[:6000] or "(no output)"
+
+
+def remote_control(target):
+    """Open Claude's official phone bridge (`claude remote-control`) in tmux/Terminal.
+    The QR it prints is scanned with the Claude mobile app."""
+    cmd = "claude remote-control"
+    if target.get("type") == "tmux":
+        if shutil.which("tmux") is None:
+            raise ValueError("tmux לא מותקן — ראה טאב הוראות")
+        ses = target.get("session", "")
+        if ses == "__new__":
+            ses = "claude"
+            if not any(s["name"] == ses for s in tmux_sessions()):
+                tmux("new-session", "-d", "-s", ses)
+        elif ses not in [s["name"] for s in tmux_sessions()]:
+            raise ValueError("סשן tmux לא קיים")
+        win = next_window_name(ses, "rc")
+        tmux("new-window", "-t", f"{ses}:", "-n", win)
+        tmux("send-keys", "-t", f"{ses}:{win}", cmd, "C-m")
+        return {"tmux": f"{ses}:{win}"}
+    run_in_terminal(cmd)
+    return {"terminal": True}
+
+
 def qr_svg(text):
     if shutil.which("qrencode") is None:
         raise ValueError("qrencode not installed — brew install qrencode")
@@ -426,6 +472,7 @@ def state():
         "alias_installed": alias_installed(),
         "remote": {"user": os.environ.get("USER", ""), "ip": local_ip(),
                    "qr": shutil.which("qrencode") is not None},
+        "claude_version": claude_version(),
         "repos": repos(),
         "claude_md": {"exists": CLAUDE_MD.exists(),
                       "tokens": round(CLAUDE_MD.stat().st_size / 4 / 1000, 1) if CLAUDE_MD.exists() else 0},
@@ -702,6 +749,10 @@ class H(BaseHTTPRequestHandler):
                 run_in_terminal("claude /login")
             elif self.path == "/api/install-alias":
                 install_alias()
+            elif self.path == "/api/update":
+                out["output"] = claude_update()
+            elif self.path == "/api/remote-control":
+                out.update(remote_control(req.get("target") or {"type": "terminal"}))
             elif self.path == "/api/mcp-server/add":
                 out["file"] = add_mcp_profile(req)
             elif self.path == "/api/skill/create":

@@ -298,6 +298,18 @@ he:{
  hk_PostCompact:"רץ אחרי הדחיסה — משחזר מטמונים",
  hk_UserPromptSubmit:"רץ עם כל הודעה שאתה שולח — רענון מטמון איכות",
  hk_CwdChanged:"רץ כשמחליפים תיקיית עבודה — מנקה מטמונים תלויי-מיקום",
+ remote_sec:"עבודה מהטלפון",
+ remote_sec_tip:"שתי דרכים: אפליקציית Claude הרשמית (remote-control, עובד מכל מקום) או כניסת SSH ישירה לסשן tmux (אותה רשת / Tailscale).",
+ rc_row:"אפליקציית Claude (רשמי)",
+ rc_hint:"מריץ ‎claude remote-control — סרוק את ה-QR שיופיע בטאב שנפתח עם אפליקציית Claude בטלפון, או המשך ב-claude.ai/code. עובד מכל רשת.",
+ rc_btn:"הפעל remote-control",
+ rc_done:"נפתח ✓ — סרוק את ה-QR בטאב שנוצר עם אפליקציית Claude",
+ ssh_row:"‏SSH ישיר לסשן tmux",
+ ssh_hint:"בפתיחת כל סשן סמן \"הצג QR\" — הסריקה נותנת את פקודת החיבור המלאה לאותו סשן חי. דורש אותה רשת ו-Remote Login פעיל.",
+ qr_alt:"📋 הסריקה מחזירה את הפקודה כטקסט — העתק והדבק בטרמינל של Termius/Blink. חלופה נוחה יותר לטווח ארוך: הוסף ב-Termius מארח קבוע (Host: {ip}, ‏User: {user}) — ומאז זו כניסה בנגיעה + ‎tmux attach.",
+ ver_row:"גרסת Claude Code",
+ ver_tip:"עדכון מריץ את המנגנון המובנה של Claude עצמו (claude update) — בדיוק כמו עדכון ידני.",
+ update_btn:"עדכן לאחרונה",updating:"מעדכן…",
  bp_bare_n:"נקי לגמרי",bp_bare_d:"בלי סקילים, בלי MCP, בלי sub-agents — מינימום מוחלט",
  bp_cl_n:"קלאסי + סקילים",bp_cl_d:"רזה עם כל הסקילים — ברירת מחדל יומיומית",
  bp_mcp_n:"קלאסי + MCP מקומי",bp_mcp_d:"סקילים + כל פרופילי ה-MCP המקומיים",
@@ -409,6 +421,18 @@ en:{
  hk_PostCompact:"Runs after compaction — restores caches",
  hk_UserPromptSubmit:"Runs on every message you send — refreshes the quality cache",
  hk_CwdChanged:"Runs when the working directory changes — clears location-bound caches",
+ remote_sec:"Work from your phone",
+ remote_sec_tip:"Two ways: the official Claude app (remote-control, works from anywhere) or direct SSH into a tmux session (same network / Tailscale).",
+ rc_row:"Claude app (official)",
+ rc_hint:"Runs `claude remote-control` — scan the QR that appears in the opened tab with the Claude mobile app, or continue at claude.ai/code. Works from any network.",
+ rc_btn:"Start remote-control",
+ rc_done:"Started ✓ — scan the QR in the new tab with the Claude app",
+ ssh_row:"Direct SSH into a tmux session",
+ ssh_hint:"When launching any session, tick \"Show QR\" — scanning yields the full connect command to that live session. Needs same network and Remote Login enabled.",
+ qr_alt:"📋 Scanning returns the command as text — copy it into the Termius/Blink terminal. Nicer long-term: add a saved host in Termius (Host: {ip}, User: {user}) — then it's one tap + tmux attach.",
+ ver_row:"Claude Code version",
+ ver_tip:"Update runs Claude's own built-in mechanism (claude update) — exactly like updating manually.",
+ update_btn:"Update to latest",updating:"Updating…",
  bp_bare_n:"Completely clean",bp_bare_d:"No skills, no MCP, no sub-agents — absolute minimum",
  bp_cl_n:"Classic + skills",bp_cl_d:"Lean with all skills — the everyday default",
  bp_mcp_n:"Classic + local MCP",bp_mcp_d:"Skills + all local MCP profiles",
@@ -485,11 +509,14 @@ function saveFile(){
 }
 function showRemote(tmuxTarget){
   const R=S.remote||{},ses=(tmuxTarget||"").split(":")[0];
-  const sshUri=`ssh://${R.user}@${R.ip}`;
-  $("remoteSteps").innerHTML=t("remote_steps");
-  $("remoteCmds").textContent=`ssh ${R.user}@${R.ip}\ntmux attach -t ${ses}`;
+  // QR carries the FULL connect command as plain text: phone scanners hand it
+  // to the clipboard reliably (ssh:// URIs open as dead text on many devices)
+  const connectCmd=`ssh -t ${R.user}@${R.ip} "tmux attach -t ${ses}"`;
+  $("remoteSteps").innerHTML=t("remote_steps")
+    +`<br>${t("qr_alt").replace("{ip}",R.ip).replace("{user}",R.user)}`;
+  $("remoteCmds").textContent=connectCmd;
   if(R.qr&&R.ip){
-    fetch("/api/qr?text="+encodeURIComponent(sshUri)).then(r=>r.ok?r.text():"").then(svg=>{
+    fetch("/api/qr?text="+encodeURIComponent(connectCmd)).then(r=>r.ok?r.text():"").then(svg=>{
       $("qrBox").innerHTML=svg?`<div style="background:#fff;padding:10px;border-radius:12px;width:190px">${svg.replace(/<svg /,'<svg style="width:100%;height:auto" ')}</div>`:"";
     });
   }else{
@@ -557,6 +584,17 @@ function buildStatic(){
             <button class="primary" onclick="askTarget({custom:customSpec()})">${t("open_session")}</button>
             <button onclick="copyCmd()">${t("copy")}</button>
             <button onclick="saveAsPreset()">${t("save_preset")}</button></div></div>
+      </div>
+    </section>
+
+    <section style="margin-top:1.2rem">
+      <div class="shead"><b>${t("remote_sec")}</b>${Q("remote_sec_tip")}</div>
+      <div class="sbody">
+        <div class="row"><div><div class="name">${t("rc_row")}</div>
+          <div class="hint">${t("rc_hint")}</div></div>
+          <button class="primary" onclick="askTarget({remoteControl:true})">${t("rc_btn")}</button></div>
+        <div class="row"><div><div class="name">${t("ssh_row")}</div>
+          <div class="hint">${t("ssh_hint")}</div></div></div>
       </div>
     </section>
   </div>
@@ -843,6 +881,13 @@ function doLaunch(){
   localStorage.setItem("cc-target",v);
   const wantQr=$("wantQr")?.checked&&v.startsWith("tmux:");
   const target=v.startsWith("tmux:")?{type:"tmux",session:v.slice(5)}:{type:"terminal"};
+  if(pendingLaunch.remoteControl){
+    api("/api/remote-control",{target}).then(j=>{
+      closeOv("ovTarget");
+      toast(j.tmux?`${t("rc_done")} (${j.tmux})`:t("rc_done"));
+    });
+    return;
+  }
   api("/api/launch",{...pendingLaunch,target}).then(j=>{
     closeOv("ovTarget");
     toast(j.tmux?`${t("opened_tmux")} ${j.tmux} ✓`:t("opened_term"));
@@ -857,10 +902,20 @@ function renderAccount(){
     <div class="row"><div><div class="name">${t("acct_row")}</div>
       <div class="hint">${a.email?esc(a.email)+(a.org?" · "+esc(a.org):""):t("acct_none")}</div></div>
       <button onclick="api('/api/login',{}).then(()=>toast(t('login_toast')))">${t("login")}</button></div>
+    <div class="row"><div><div class="name">${t("ver_row")} ${Q("ver_tip")}
+        <span class="tag t-est">${esc(S.claude_version||"?")}</span></div></div>
+      <button onclick="runUpdate(this)">${t("update_btn")}</button></div>
     <div class="row"><div><div class="name">${t("diag")} ${Q("diag_tip")}</div>
       <div class="hint">${t("diag_h")}</div></div>
       <button onclick="runDoctor(this)">${t("run_diag")}</button></div>
     <div id="doctorOut"></div>`;
+}
+async function runUpdate(btn){
+  btn.disabled=true;btn.textContent=t("updating");
+  try{
+    const j=await api("/api/update",{});
+    $("doctorOut").innerHTML=`<div class="muted" style="margin-top:.5rem;direction:ltr;text-align:left">$ claude update</div><pre class="out">${esc(j.output||"")}</pre>`;
+  }finally{btn.disabled=false;btn.textContent=t("update_btn");}
 }
 async function runDoctor(btn){
   btn.disabled=true;btn.textContent=t("running");
