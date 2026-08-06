@@ -64,3 +64,13 @@ and its own state in `~/.claude/dashboard/` (`presets.json`, `config.json`, cach
 Ship only `server.py`, `index.html`, `README.md`. The runtime files
 (`presets.json`, `config.json`, `.monitor-cache.json`, `.sounds-off`,
 `.session-rules.md`) are the user's personal state — do not include them.
+
+## Chrome extension (quick actions)
+
+A minimal MV3 extension lives in `extension/`: quotas at a glance, one-click
+session launch into your chosen tmux target, sounds toggle, and an expand
+button that opens the full dashboard in a new tab. It talks only to
+`127.0.0.1:7799` (the local server must be running).
+
+Install: `chrome://extensions` → enable **Developer mode** → **Load unpacked**
+→ select the `extension/` folder.
