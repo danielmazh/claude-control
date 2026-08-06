@@ -300,8 +300,88 @@ def mcp_profiles():
 
 def hooks_summary():
     hooks = jread(SETTINGS).get("hooks") or {}
-    return [{"event": ev, "count": sum(len(m.get("hooks", [])) for m in matchers)}
-            for ev, matchers in hooks.items()]
+    out = []
+    for ev, matchers in hooks.items():
+        scripts = []
+        for m in matchers:
+            for h in m.get("hooks", []):
+                c = h.get("command", "")
+                found = re.findall(r"([A-Za-z0-9_.-]+\.(?:py|sh|js))", c)
+                scripts += found or ([c.split()[0].split("/")[-1]] if c.strip() else [])
+        out.append({"event": ev,
+                    "count": sum(len(m.get("hooks", [])) for m in matchers),
+                    "scripts": sorted(set(s for s in scripts if s))[:6]})
+    return out
+
+
+def local_ip():
+    for iface in ("en0", "en1", "en2"):
+        try:
+            r = subprocess.run(["ipconfig", "getifaddr", iface],
+                               capture_output=True, text=True, timeout=3)
+            if r.returncode == 0 and r.stdout.strip():
+                return r.stdout.strip()
+        except Exception:
+            pass
+    return ""
+
+
+def qr_svg(text):
+    if shutil.which("qrencode") is None:
+        raise ValueError("qrencode not installed — brew install qrencode")
+    r = subprocess.run(["qrencode", "-t", "SVG", "-o", "-", text[:200]],
+                       capture_output=True, timeout=10)
+    return r.stdout
+
+
+def add_mcp_profile(req):
+    name = (req.get("name") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,30}", name):
+        raise ValueError("invalid name (a-z, 0-9, -, _)")
+    fn = MCP_DIR / f"{name}.json"
+    if fn.exists():
+        raise ValueError("profile already exists")
+    if req.get("kind") == "http":
+        url = (req.get("url") or "").strip()
+        if not re.fullmatch(r"https://[A-Za-z0-9./_?&=%~-]+", url):
+            raise ValueError("invalid https URL")
+        server = {"type": "http", "url": url}
+    else:
+        parts = (req.get("command") or "").strip().split()
+        if not parts:
+            raise ValueError("empty command")
+        server = {"command": parts[0], "args": parts[1:]}
+    MCP_DIR.mkdir(parents=True, exist_ok=True)
+    jwrite(fn, {"mcpServers": {name: server}})
+    return fn.name
+
+
+def create_skill(req):
+    slug = re.sub(r"[^a-z0-9-]+", "-", (req.get("name") or "").lower()).strip("-")[:40]
+    if not slug:
+        raise ValueError("invalid name")
+    d = SKILLS / slug
+    if d.exists():
+        raise ValueError("skill already exists")
+    desc = (req.get("description") or "").strip().replace("\n", " ")[:300]
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        f"---\nname: {slug}\ndescription: {desc}\n---\n\n{req.get('content', '')}\n")
+    return slug
+
+
+def create_file(req):
+    rel = (req.get("path") or "").strip().lstrip("/")
+    if ".." in rel or not re.fullmatch(r"[A-Za-z0-9._/ -]{1,120}", rel):
+        raise ValueError("invalid path")
+    p = (CL / rel).resolve()
+    if not str(p).startswith(str(CL.resolve()) + os.sep):
+        raise ValueError("path must be under ~/.claude")
+    if p.exists():
+        raise ValueError("file already exists")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(req.get("content", ""))
+    return rel
 
 
 def account_info():
@@ -344,6 +424,8 @@ def state():
         "desktop": desktop_info(),
         "config": dash_config(),
         "alias_installed": alias_installed(),
+        "remote": {"user": os.environ.get("USER", ""), "ip": local_ip(),
+                   "qr": shutil.which("qrencode") is not None},
         "repos": repos(),
         "claude_md": {"exists": CLAUDE_MD.exists(),
                       "tokens": round(CLAUDE_MD.stat().st_size / 4 / 1000, 1) if CLAUDE_MD.exists() else 0},
@@ -560,10 +642,19 @@ class H(BaseHTTPRequestHandler):
             self._json(200, MANIFEST)
         elif self.path == "/api/state":
             self._json(200, state())
-        elif self.path == "/api/monitor":
+        elif self.path.startswith("/api/monitor"):
+            if "force" in self.path:
+                MONITOR_CACHE.unlink(missing_ok=True)
             self._json(200, monitor())
         elif self.path == "/api/doctor":
             self._json(200, {"checks": doctor()})
+        elif self.path.startswith("/api/qr"):
+            from urllib.parse import parse_qs, urlparse
+            text = (parse_qs(urlparse(self.path).query).get("text") or [""])[0]
+            try:
+                self._send(200, "image/svg+xml", qr_svg(text))
+            except Exception as e:
+                self._json(400, {"error": str(e)})
         else:
             self._json(404, {"error": "not found"})
 
@@ -611,6 +702,12 @@ class H(BaseHTTPRequestHandler):
                 run_in_terminal("claude /login")
             elif self.path == "/api/install-alias":
                 install_alias()
+            elif self.path == "/api/mcp-server/add":
+                out["file"] = add_mcp_profile(req)
+            elif self.path == "/api/skill/create":
+                out["slug"] = create_skill(req)
+            elif self.path == "/api/file/create":
+                out["path"] = create_file(req)
             elif self.path == "/api/open":
                 open_target(req["what"])
             elif self.path == "/api/shutdown":

@@ -179,6 +179,7 @@
     </nav>
     <button class="flag" id="fl-he" onclick="setLang('he')" title="עברית">🇮🇱</button>
     <button class="flag" id="fl-en" onclick="setLang('en')" title="English">🇬🇧</button>
+    <button class="power" id="refreshBtn" onclick="refreshAll(this)">⟳</button>
     <button class="power" id="powerBtn" onclick="shutdown()">⏻</button>
   </header>
 
@@ -270,6 +271,33 @@ he:{
  ed_cwd:"תיקיית עבודה",
  ed_flags_exp:"<b>סקילים</b> — תפריט היכולות: ‏~2-3k בפתיחה, הגוף נטען רק בשימוש. <b>מינימלי</b> — 6 כלים בסיסיים, בלי סקילים ובלי sub-agents; גובר על השאר. שניהם כבויים = כלים מלאים בלי תפריט סקילים.",
  mine_suffix:" — שלי",
+ refresh_tip:"רענון מלא של כל הדשבורד — הגדרות, פרופילים, סקילים, MCP, וגם חישוב מחדש של נתוני המוניטור",refreshed:"הכול רוענן ✓",
+ limits_age:"נכון לפני {t}",limits_now:"עדכני",
+ limits_src_tip:"נתוני המכסות מגיעים מ-Claude Code עצמו (payload של ‎/usage דרך שורת הסטטוס) — הם מתעדכנים רק בזמן שסשן Claude פתוח. אין סשן פתוח = הנתון נשאר מהרגע האחרון שהיה.",
+ add_mcp:"+ שרת חדש",mcp_add_t:"הוספת שרת MCP",mcp_name:"שם (a-z, מקפים)",mcp_kind:"סוג",mcp_http:"‏HTTP מתארח (כולל OAuth)",mcp_stdio:"פקודה מקומית (stdio)",mcp_url:"כתובת https",mcp_cmd_l:"פקודה מלאה",
+ mcp_add_exp:"אותו מנגנון בדיוק כמו ‎claude mcp add — נשמר כקובץ פרופיל ב-registry/mcp, וזמין מיד לבחירה בכל פרופיל וסשן. שרת מתארח עם התחברות (כמו Resend / Cloudflare) — בחר HTTP; האימות יקפוץ בדפדפן בשימוש הראשון.",
+ conn_note:"קונקטורים של חשבון claude.ai מוסיפים רק בחנות שלהם (הכפתור); שרת מתארח עם OAuth אפשר להוסיף כאן למטה כשרת MCP ‏HTTP — אותה תוצאה, בשליטתך.",
+ add_skill:"+ סקיל חדש",skill_add_t:"יצירת סקיל",skill_desc:"תיאור (מתי להשתמש — זה מה שנטען לתפריט)",skill_content:"תוכן הסקיל (Markdown)",
+ skill_add_exp:"נוצר בדיוק במבנה ש-Claude טוען: תיקייה עם SKILL.md ו-frontmatter. פעיל מיידית, גם בסשנים פתוחים.",
+ add_file:"+ קובץ חדש",file_add_t:"יצירת קובץ",file_path_l:"נתיב תחת ‎~/.claude",file_content:"תוכן",
+ file_add_exp:"יצירת כל קובץ קונפיגורציה תחת ‎~/.claude — למשל docs/my-notes.md או registry/mcp/x.json.",
+ created:"נוצר ✓",
+ qr_opt:"הצג QR לעבודה מהטלפון אחרי הפתיחה",
+ remote_t:"עבודה מהטלפון",
+ remote_exp:"ה-QR מקודד חיבור SSH למק הזה. הטלפון נכנס לאותו סשן tmux חי — אותו Claude, אותו מסך, בלייב.",
+ remote_steps:"<b>פעם ראשונה:</b> ‏1) הפעל Remote Login‏ (System Settings ← General ← Sharing) ‏2) התקן בטלפון אפליקציית SSH‏ (Termius / Blink) ‏3) הישאר באותה רשת (או Tailscale).<br><b>ואז:</b> סרוק ← התחבר ← הרץ:",
+ qr_missing:"להצגת QR התקן: ‏brew install qrencode ‏(בינתיים — התחבר ידנית לפי הפקודות)",
+ hk_SessionStart:"רץ בפתיחת כל סשן (וגם אחרי clear/compact) — מזריק הקשר או מכין מטמונים",
+ hk_SessionEnd:"רץ כשסשן נסגר — שמירת מצב וסיכומים",
+ hk_Stop:"רץ כש-Claude מסיים תשובה — צ'קפוינט וצליל סיום",
+ hk_StopFailure:"רץ אם סיום התשובה נכשל — שמירת צ'קפוינט חירום",
+ hk_Notification:"רץ כש-Claude מבקש אישור או תשומת לב — צליל התראה",
+ hk_PreToolUse:"רץ לפני כל הפעלת כלי — יכול לחסום קריאות מיותרות (חוסך טוקנים)",
+ hk_PostToolUse:"רץ אחרי כל כלי — דוחס וארכב תוצאות (חוסך טוקנים)",
+ hk_PreCompact:"רץ לפני דחיסת הקונטקסט — שומר את מה שחשוב",
+ hk_PostCompact:"רץ אחרי הדחיסה — משחזר מטמונים",
+ hk_UserPromptSubmit:"רץ עם כל הודעה שאתה שולח — רענון מטמון איכות",
+ hk_CwdChanged:"רץ כשמחליפים תיקיית עבודה — מנקה מטמונים תלויי-מיקום",
  bp_bare_n:"נקי לגמרי",bp_bare_d:"בלי סקילים, בלי MCP, בלי sub-agents — מינימום מוחלט",
  bp_cl_n:"קלאסי + סקילים",bp_cl_d:"רזה עם כל הסקילים — ברירת מחדל יומיומית",
  bp_mcp_n:"קלאסי + MCP מקומי",bp_mcp_d:"סקילים + כל פרופילי ה-MCP המקומיים",
@@ -354,6 +382,33 @@ en:{
  ed_cwd:"Working folder",
  ed_flags_exp:"<b>Skills</b> — the capability menu: ~2-3k at start, bodies load on use. <b>Bare</b> — 6 basic tools, no skills, no sub-agents; overrides the rest. Both off = full tools without the skills menu.",
  mine_suffix:" — mine",
+ refresh_tip:"Full dashboard refresh — settings, profiles, skills, MCP, plus a monitor recompute",refreshed:"Everything refreshed ✓",
+ limits_age:"as of {t} ago",limits_now:"live",
+ limits_src_tip:"Quota numbers come from Claude Code itself (the /usage payload via the status line) — they update only while a Claude session is open. No open session = the number stays from the last moment one was.",
+ add_mcp:"+ New server",mcp_add_t:"Add MCP server",mcp_name:"Name (a-z, dashes)",mcp_kind:"Type",mcp_http:"Hosted HTTP (incl. OAuth)",mcp_stdio:"Local command (stdio)",mcp_url:"https URL",mcp_cmd_l:"Full command",
+ mcp_add_exp:"Exactly the same mechanism as `claude mcp add` — saved as a profile file in registry/mcp, instantly selectable in any profile or session. Hosted servers with sign-in (Resend / Cloudflare style) — pick HTTP; auth pops up in the browser on first use.",
+ conn_note:"claude.ai account connectors are added only in their store (the button); a hosted OAuth server can be added below as an HTTP MCP server — same result, under your control.",
+ add_skill:"+ New skill",skill_add_t:"Create skill",skill_desc:"Description (when to use — this is what loads into the menu)",skill_content:"Skill content (Markdown)",
+ skill_add_exp:"Created in exactly the structure Claude loads: a folder with SKILL.md and frontmatter. Active immediately, even in open sessions.",
+ add_file:"+ New file",file_add_t:"Create file",file_path_l:"Path under ~/.claude",file_content:"Content",
+ file_add_exp:"Create any configuration file under ~/.claude — e.g. docs/my-notes.md or registry/mcp/x.json.",
+ created:"Created ✓",
+ qr_opt:"Show a QR for phone access after launch",
+ remote_t:"Work from your phone",
+ remote_exp:"The QR encodes an SSH connection to this Mac. Your phone joins the same live tmux session — same Claude, same screen, live.",
+ remote_steps:"<b>First time:</b> 1) Enable Remote Login (System Settings → General → Sharing) 2) Install an SSH app on the phone (Termius / Blink) 3) Be on the same network (or Tailscale).<br><b>Then:</b> scan → connect → run:",
+ qr_missing:"To show a QR install: brew install qrencode (meanwhile — connect manually with the commands)",
+ hk_SessionStart:"Runs when a session opens (and after clear/compact) — injects context or warms caches",
+ hk_SessionEnd:"Runs when a session closes — saves state and summaries",
+ hk_Stop:"Runs when Claude finishes a reply — checkpoint and completion sound",
+ hk_StopFailure:"Runs if finishing fails — emergency checkpoint",
+ hk_Notification:"Runs when Claude asks for approval or attention — alert sound",
+ hk_PreToolUse:"Runs before every tool call — can block redundant calls (saves tokens)",
+ hk_PostToolUse:"Runs after every tool — compresses and archives results (saves tokens)",
+ hk_PreCompact:"Runs before context compaction — preserves what matters",
+ hk_PostCompact:"Runs after compaction — restores caches",
+ hk_UserPromptSubmit:"Runs on every message you send — refreshes the quality cache",
+ hk_CwdChanged:"Runs when the working directory changes — clears location-bound caches",
  bp_bare_n:"Completely clean",bp_bare_d:"No skills, no MCP, no sub-agents — absolute minimum",
  bp_cl_n:"Classic + skills",bp_cl_d:"Lean with all skills — the everyday default",
  bp_mcp_n:"Classic + local MCP",bp_mcp_d:"Skills + all local MCP profiles",
@@ -402,6 +457,45 @@ function showTab(tab){
     $("tabbtn-"+x).classList.toggle("on",x===tab);
   }
   if(tab==="monitor")loadMonitor();
+}
+async function refreshAll(btn){
+  btn.style.opacity=".4";
+  try{
+    const s=await fetch("/api/state").then(r=>r.json());S=s;renderAll();
+    if(activeTab==="monitor"||M){M=await fetch("/api/monitor?force=1").then(r=>r.json());
+      if(activeTab==="monitor")renderMonitor();}
+    toast(t("refreshed"));
+  }finally{btn.style.opacity="";}
+}
+function openMcpAdd(){$("mcpName").value="";$("mcpUrl").value="";$("mcpCmd").value="";$("ovMcp").classList.add("on");}
+function saveMcp(){
+  api("/api/mcp-server/add",{name:$("mcpName").value,kind:$("mcpKind").value,
+    url:$("mcpUrl").value,command:$("mcpCmd").value})
+  .then(()=>{closeOv("ovMcp");toast(t("created"));});
+}
+function openSkillAdd(){$("skName").value="";$("skDesc").value="";$("skContent").value="";$("ovSkill").classList.add("on");}
+function saveSkill(){
+  api("/api/skill/create",{name:$("skName").value,description:$("skDesc").value,content:$("skContent").value})
+  .then(()=>{closeOv("ovSkill");toast(t("created"));});
+}
+function openFileAdd(){$("fileP").value="";$("fileC").value="";$("ovFile").classList.add("on");}
+function saveFile(){
+  api("/api/file/create",{path:$("fileP").value,content:$("fileC").value})
+  .then(()=>{closeOv("ovFile");toast(t("created"));});
+}
+function showRemote(tmuxTarget){
+  const R=S.remote||{},ses=(tmuxTarget||"").split(":")[0];
+  const sshUri=`ssh://${R.user}@${R.ip}`;
+  $("remoteSteps").innerHTML=t("remote_steps");
+  $("remoteCmds").textContent=`ssh ${R.user}@${R.ip}\ntmux attach -t ${ses}`;
+  if(R.qr&&R.ip){
+    fetch("/api/qr?text="+encodeURIComponent(sshUri)).then(r=>r.ok?r.text():"").then(svg=>{
+      $("qrBox").innerHTML=svg?`<div style="background:#fff;padding:10px;border-radius:12px;width:190px">${svg.replace(/<svg /,'<svg style="width:100%;height:auto" ')}</div>`:"";
+    });
+  }else{
+    $("qrBox").innerHTML=`<div class="muted">${esc(t("qr_missing"))}</div>`;
+  }
+  $("ovRemote").classList.add("on");
 }
 function shutdown(){
   if(!confirm(t("confirm_off")))return;
@@ -472,10 +566,12 @@ function buildStatic(){
       <div class="sbody" id="account"></div></section>
     <section><div class="shead"><b>${t("cc")}</b>${Q("cc_tip")}</div>
       <div class="sbody" id="settings"></div></section>
-    <section><div class="shead"><b>${t("files")}</b>${Q("files_tip")}</div>
+    <section><div class="shead"><b>${t("files")}</b>${Q("files_tip")}
+        <button style="margin-inline-start:auto" onclick="openFileAdd()">${t("add_file")}</button></div>
       <div class="sbody" id="files"></div></section>
     <section><div class="shead"><b>${t("mcp_sec")}</b>${Q("mcp_sec_tip")}
-        <button style="margin-inline-start:auto" onclick="api('/api/open',{what:'mcp-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
+        <button style="margin-inline-start:auto" onclick="openMcpAdd()">${t("add_mcp")}</button>
+        <button onclick="api('/api/open',{what:'mcp-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
       <div class="sbody" id="mcpList"></div></section>
     <section><div class="shead"><b>${t("hooks")}</b>${Q("hooks_tip")}
         <button style="margin-inline-start:auto" onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("edit_arrow")}</button></div>
@@ -486,6 +582,7 @@ function buildStatic(){
       <div class="sbody" id="rulesList"></div></section>
     <section><div class="shead"><b>${t("skills_sec")}</b>${Q("skills_sec_tip")}
         <input type="text" id="skSearch" placeholder="${esc(t("search"))}" style="max-width:170px;margin-inline-start:auto" oninput="renderSkills()">
+        <button onclick="openSkillAdd()">${t("add_skill")}</button>
         <span class="muted" id="skCount"></span></div>
       <div class="sbody" style="max-height:420px;overflow-y:auto" id="skillsTable"></div></section>
     <section><div class="shead"><b>${t("desktop")}</b>${Q("desktop_tip")}</div>
@@ -562,9 +659,52 @@ function buildStatic(){
   <div class="overlay" id="ovTarget" dir="${dir}"><div class="modal">
     <h3>${t("where")} ${Q("where_tip")}</h3>
     <div id="targetList"></div>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.85rem;margin-top:.6rem">
+      <input type="checkbox" id="wantQr"> ${t("qr_opt")}</label>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.7rem">
       <button onclick="closeOv('ovTarget')">${t("cancel")}</button>
       <button class="primary" onclick="doLaunch()">${t("open")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovMcp" dir="${dir}"><div class="modal">
+    <h3>${t("mcp_add_t")}</h3>
+    <div class="bp">${t("mcp_add_exp")}</div>
+    <div class="field"><label>${t("mcp_name")}</label><input type="text" id="mcpName" dir="ltr" placeholder="my-server"></div>
+    <div class="field"><label>${t("mcp_kind")}</label>
+      <select id="mcpKind" onchange="$('mcpUrlF').style.display=this.value==='http'?'':'none';$('mcpCmdF').style.display=this.value==='http'?'none':''">
+        <option value="http">${t("mcp_http")}</option><option value="stdio">${t("mcp_stdio")}</option></select></div>
+    <div class="field" id="mcpUrlF"><label>${t("mcp_url")}</label><input type="text" id="mcpUrl" dir="ltr" placeholder="https://mcp.example.com/mcp"></div>
+    <div class="field" id="mcpCmdF" style="display:none"><label>${t("mcp_cmd_l")}</label><input type="text" id="mcpCmd" dir="ltr" placeholder="npx -y @some/mcp-server"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button onclick="closeOv('ovMcp')">${t("cancel")}</button>
+      <button class="primary" onclick="saveMcp()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovSkill" dir="${dir}"><div class="modal">
+    <h3>${t("skill_add_t")}</h3>
+    <div class="bp">${t("skill_add_exp")}</div>
+    <div class="field"><label>${t("name_l")}</label><input type="text" id="skName" dir="ltr" placeholder="my-skill"></div>
+    <div class="field"><label>${t("skill_desc")}</label><input type="text" id="skDesc"></div>
+    <div class="field"><label>${t("skill_content")}</label><textarea id="skContent"></textarea></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button onclick="closeOv('ovSkill')">${t("cancel")}</button>
+      <button class="primary" onclick="saveSkill()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovFile" dir="${dir}"><div class="modal">
+    <h3>${t("file_add_t")}</h3>
+    <div class="bp">${t("file_add_exp")}</div>
+    <div class="field"><label>${t("file_path_l")}</label><input type="text" id="fileP" dir="ltr" placeholder="docs/notes.md"></div>
+    <div class="field"><label>${t("file_content")}</label><textarea id="fileC"></textarea></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button onclick="closeOv('ovFile')">${t("cancel")}</button>
+      <button class="primary" onclick="saveFile()">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovRemote" dir="${dir}"><div class="modal">
+    <h3>${t("remote_t")}</h3>
+    <p class="muted" style="margin-bottom:.6rem">${t("remote_exp")}</p>
+    <div id="qrBox" style="display:flex;justify-content:center;margin:.5rem 0"></div>
+    <div class="bp" id="remoteSteps"></div>
+    <pre class="out" id="remoteCmds"></pre>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem">
+      <button class="primary" onclick="closeOv('ovRemote')">${t("open")}</button></div>
   </div></div>`;
 }
 
@@ -701,10 +841,12 @@ function askTarget(what){
 function doLaunch(){
   const v=(document.querySelector("input[name=tgt]:checked")||{}).value||"terminal";
   localStorage.setItem("cc-target",v);
+  const wantQr=$("wantQr")?.checked&&v.startsWith("tmux:");
   const target=v.startsWith("tmux:")?{type:"tmux",session:v.slice(5)}:{type:"terminal"};
   api("/api/launch",{...pendingLaunch,target}).then(j=>{
     closeOv("ovTarget");
     toast(j.tmux?`${t("opened_tmux")} ${j.tmux} ✓`:t("opened_term"));
+    if(wantQr&&j.tmux)showRemote(j.tmux);
   });
 }
 
@@ -767,9 +909,12 @@ function renderMcp(){
     :`<div class="muted">${t("mcp_empty")}</div>`;
 }
 function renderHooks(){
-  $("hooksList").innerHTML=S.hooks.length?S.hooks.map(h=>`
-    <div class="row"><div class="name"><span class="cmd">${esc(h.event)}</span></div>
-      <span class="muted">${h.count} hooks</span></div>`).join("")
+  $("hooksList").innerHTML=S.hooks.length?S.hooks.map(h=>{
+    const tip=I18N[L]["hk_"+h.event]||"";
+    return `<div class="row"><div><div class="name"><span class="cmd">${esc(h.event)}</span>
+        ${tip?`<span class="q" data-tip="${esc(tip)}">?</span>`:""}</div>
+      <div class="hint" style="direction:ltr;text-align:end">${esc((h.scripts||[]).join(" · "))}</div></div>
+      <span class="muted">${h.count} hooks</span></div>`;}).join("")
     :`<div class="muted">${t("hooks_empty")}</div>`;
 }
 function renderRules(){
@@ -813,7 +958,8 @@ function renderDesktop(){
   const d=S.desktop;
   $("desktopSec").innerHTML=`
     <div class="row"><div><div class="name">${t("connectors")} ${Q("connectors_tip")}</div>
-      <div class="hint">${t("connectors_h")}</div></div>
+      <div class="hint">${t("connectors_h")}</div>
+      <div class="hint">${t("conn_note")}</div></div>
       <button onclick="api('/api/open',{what:'connectors'}).then(()=>toast(t('opened_browser')))">${t("store")}</button></div>
     ${d.exists?`<div class="row"><div><div class="name">${t("chat_mcp")} ${Q("chat_mcp_tip")}</div>
       <div class="hint">${d.mcp_servers.map(s=>esc(s.name)).join(" · ")||"—"}</div></div>
@@ -851,10 +997,15 @@ function renderMonitor(){
   const lim=M.limits||{};
   const ses=Math.floor(lim.five_hour?.utilization??0),wk=Math.floor(lim.seven_day?.utilization??0);
   const today=M.days[M.days.length-1]||{},w=M.week||{};
+  let age="";
+  const ua=parseInt(lim.updated_at||0);
+  if(ua){const m=Math.round((Date.now()/1000-ua)/60);
+    age=m<2?t("limits_now"):t("limits_age").replace("{t}",m<60?m+"m":Math.round(m/60)+"h");}
+  const ageTag=age?`<span class="tag t-manual q" data-tip="${esc(t("limits_src_tip"))}">${age}</span>`:Q("limits_src_tip");
   $("kpis").innerHTML=`
-    <div class="kpi"><div class="l">${t("mon_5h")} ${Q("mon_5h_tip")}</div>
+    <div class="kpi"><div class="l">${t("mon_5h")} ${Q("mon_5h_tip")} ${ageTag}</div>
       <div class="n">${ses}%</div><div class="bar"><i class="${barCls(ses)}" style="width:${ses}%"></i></div></div>
-    <div class="kpi"><div class="l">${t("mon_wk")} ${Q("mon_wk_tip")}</div>
+    <div class="kpi"><div class="l">${t("mon_wk")} ${Q("mon_wk_tip")} ${ageTag}</div>
       <div class="n">${wk}%</div><div class="bar"><i class="${barCls(wk)}" style="width:${wk}%"></i></div></div>
     <div class="kpi"><div class="l">${t("mon_today")} ${Q("mon_today_tip")}</div>
       <div class="n">${fmtTok(today.output)}</div><div class="l">${today.messages||0} ${t("msgs")}</div></div>
