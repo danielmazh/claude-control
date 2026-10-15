@@ -7,45 +7,40 @@
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#CC785C">
+<meta name="theme-color" content="#171614">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* dark palette (design 2026-10). Legacy names (--card, --ink, --code, --good, --blue, --danger)
+     stay as aliases so the existing renders keep working. */
   :root {
-    --bg:#f7f5f1; --card:#fff; --ink:#22201d; --muted:#7a746c; --line:#e6e2da;
-    --accent:#c96442; --accent-soft:#f9ece5; --good:#177245; --good-soft:#e8f5ee;
-    --blue:#2458c5; --blue-soft:#e9effc; --code:#f1eee9; --danger:#b91c1c;
-    --shadow:0 1px 3px rgba(30,25,20,.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:#171614; --card:#201f1c; --ink:#ece9e2; --muted:#9c968e; --line:#343128;
-      --accent:#e0855f; --accent-soft:#33221a; --good:#4ade80; --good-soft:#132a1c;
-      --blue:#7aa5f8; --blue-soft:#1a2438; --code:#2a2823; --danger:#f87171;
-      --shadow:0 1px 3px rgba(0,0,0,.35);
-    }
+    --bg:#171614; --surface:#211F1C; --surface-2:#2A2824; --line:#34312C;
+    --text:#EDE9E3; --muted:#9C968C; --accent:#E0805A;
+    --ok:#6FBF73; --warn:#E3B341; --bad:#E5645A; --info:#7AA2F7;
+    --log-bg:#121110;
+    --card:var(--surface); --ink:var(--text); --code:var(--surface-2);
+    --good:var(--ok); --blue:var(--info); --danger:var(--bad);
+    --accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);
+    --good-soft:color-mix(in srgb,var(--ok) 15%,transparent);
+    --blue-soft:color-mix(in srgb,var(--info) 13%,transparent);
+    --warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);
+    --bad-soft:color-mix(in srgb,var(--bad) 14%,transparent);
+    --shadow:0 1px 3px rgba(0,0,0,.35);
+    --font:"Rubik",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;
+    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);
-       color:var(--ink);line-height:1.6;padding:0 1rem 4rem}
-  .wrap{max-width:880px;margin:0 auto}
-  header{display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;
-    padding:.9rem 0 .8rem;border-bottom:1px solid var(--line);margin-bottom:1.3rem;
-    position:sticky;top:0;background:var(--bg);z-index:5}
-  header img{width:29px;height:29px;border-radius:8px}
-  h1{font-size:1.18rem;letter-spacing:-.01em}
-  .sub{color:var(--muted);font-size:.76rem}
-  nav{display:flex;gap:.2rem;margin-inline-start:auto}
-  nav button{font:inherit;border:none;background:none;color:var(--muted);
-    border-radius:0;padding:.5rem .85rem;cursor:pointer;font-size:.88rem;
-    border-bottom:2px solid transparent}
-  nav button:hover{color:var(--ink)}
-  nav button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
-  .flag{border:1px solid transparent;background:none;font-size:1.05rem;cursor:pointer;
-    border-radius:7px;padding:.15rem .3rem;line-height:1;opacity:.45}
-  .flag.on{opacity:1;border-color:var(--line);background:var(--card)}
-  .power{border:1px solid var(--line);background:var(--card);color:var(--muted);width:30px;height:30px;
-    border-radius:8px;cursor:pointer;font-size:.9rem;line-height:1}
-  .power:hover{color:var(--danger);border-color:var(--danger)}
-  .tab{display:none} .tab.on{display:block}
+  html{overflow-x:clip}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.55;
+       padding:0 clamp(16px,3.4vw,48px) 4rem;overflow-x:clip;min-width:0}
+  .wrap{max-width:1344px;margin:0 auto;width:100%;min-width:0}
+  .narrow{max-width:1040px;margin-inline:auto}
+  .ic{width:18px;height:18px;flex:none;vertical-align:middle}
+  [dir="ltr"] .ic.ltr-flip,[dir="rtl"] .ic.rtl-flip{transform:scaleX(-1)}
+  a{color:inherit}
+  .page{display:none;min-width:0} .page.on{display:block}
   section{background:var(--card);border:1px solid var(--line);border-radius:12px;
     box-shadow:var(--shadow);margin-bottom:1rem}
   section>.shead{display:flex;align-items:center;gap:.55rem;padding:.7rem 1.1rem;
@@ -105,6 +100,8 @@
     border-inline-start:4px solid var(--line)}
   .preset.k-generic{border-inline-start-color:var(--blue)}
   .preset.k-custom{border-inline-start-color:var(--good)}
+  .preset .pc-head{display:flex;justify-content:space-between;align-items:center;gap:.4rem}
+  .preset .pc-tools{display:flex;gap:.15rem;align-items:center}
   .preset .d{font-size:.78rem;color:var(--muted);flex:1}
   .preset .a{display:flex;gap:.45rem;margin-top:.45rem;flex-wrap:wrap;align-items:center}
   .preset .chips{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.15rem}
@@ -163,31 +160,359 @@
   pre.out{background:var(--code);border-radius:10px;padding:.7rem .9rem;direction:ltr;text-align:left;
     font-size:.76rem;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;
     max-height:280px;overflow-y:auto;margin-top:.5rem}
+  /* ═══════════ layout system (2026-10-15): one panel style, aligned columns, fixed sizes ═══════════
+     spacing scale 4/8/12/16/24/32 · page gap 24 · panel header 64 · buttons 38 (32 small) */
+  :root{--gap:24px;--ph:64px;--r:14px;--bh:38px;--bh-sm:32px;--px:20px;--tb:80px}
+  [hidden]{display:none!important}
+  body{padding:0 clamp(16px,2.4vw,32px) 32px}
+  .wrap{max-width:1440px}
+  .g3{grid-template-columns:repeat(auto-fill,minmax(min(272px,100%),1fr))}
+  .g4{grid-template-columns:repeat(auto-fill,minmax(min(192px,100%),1fr))}
+  .grid>*,.row>*{min-width:0}
+  .ms-auto{margin-inline-start:auto}
+  .optrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chkl{display:flex;gap:6px;align-items:center;font-size:.86rem;height:var(--bh)}
+  .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .mono{font-family:var(--mono)}
+  code,.cmd,textarea,pre.out,.guide pre{font-family:var(--mono)}
+  .trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .note{font-size:.74rem;color:var(--muted)}
+  .tag.q{width:auto;height:auto;border-radius:99px;display:inline-flex;font-size:.66rem;padding:.06rem .5rem}
+
+  /* buttons and inputs: one height per size */
+  button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;
+    height:var(--bh);padding:0 14px;line-height:1;font-size:.83rem;border-radius:9px;flex:none}
+  .btn{font:inherit;font-size:.83rem;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    cursor:pointer;text-decoration:none;transition:.12s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary,.btn.primary{color:#1B1310}
+  button.primary:hover,.btn.primary:hover{color:#1B1310}
+  button.sm,.btn.sm{height:var(--bh-sm);padding:0 12px;font-size:.8rem;border-radius:8px}
+  button:disabled{opacity:.55;cursor:default}
+  button .ic,.btn .ic{width:15px;height:15px}
+  button.ghost{height:28px;padding:0 6px;border:none;background:none}
+  .ib{width:var(--bh);height:var(--bh);padding:0;border-radius:10px;background:transparent;color:var(--muted)}
+  .ib .ic{width:17px;height:17px}
+  .ib.sm{width:var(--bh-sm);height:var(--bh-sm);border-radius:8px}
+  .ib:hover{color:var(--text);border-color:var(--muted)}
+  .ib.danger:hover{color:var(--bad);border-color:var(--bad)}
+  select,input[type=text]{height:var(--bh);padding:0 10px}
+  .panel-h input[type=text],.panel-h select{height:var(--bh-sm)}
+  .spin{width:13px;height:13px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;
+    display:inline-block;animation:spin .8s linear infinite;flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted);flex:none}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)} .dot.info{background:var(--info)}
+  .dot.live{box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+  .c-ok{color:var(--ok)} .c-warn{color:var(--warn)} .c-bad{color:var(--bad)} .c-info{color:var(--info)} .c-muted{color:var(--muted)}
+
+  /* page frame */
+  .page.on{display:flex;flex-direction:column;gap:var(--gap)}
+  .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:stretch}
+  .cols.wide{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+  .col{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+  .col>.panel:last-child{flex:1 1 auto}
+
+  /* panel: the only boxed section style */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;
+    min-width:0;overflow:hidden}
+  .panel.ovf{overflow:visible}
+  .panel-h{height:var(--ph);flex:none;display:flex;align-items:center;gap:12px;padding:0 var(--px);
+    border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 70%,var(--bg));
+    border-radius:var(--r) var(--r) 0 0;min-width:0}
+  .panel-h .ttl{flex:1 1 auto;min-width:0}
+  .panel-h h2{font-size:1rem;font-weight:700;line-height:1.35;display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:0}
+  .panel-h h2 .tx{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .panel-h .sub{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;margin-top:2px}
+  .panel-h .acts{display:flex;gap:8px;align-items:center;flex:none;margin-inline-start:auto}
+  .panel-b{flex:1 1 auto;padding:4px var(--px);min-width:0}
+  .panel-b.pad{padding:16px var(--px)}
+  .panel-b.flush{padding:0}
+  .panel-b.scroll{flex:1 1 0;height:0;min-height:420px;overflow-y:auto}
+  .panel-f{flex:none;padding:12px var(--px);border-top:1px solid var(--line);font-size:.74rem;color:var(--muted);line-height:1.5}
+  .row{min-height:60px;padding:10px 0;gap:16px}
+  .row>:first-child{flex:1 1 auto;min-width:0}
+  .row .name{flex-wrap:nowrap;white-space:nowrap;min-width:0}
+  .row .end{display:flex;gap:8px;align-items:center;flex:none}
+  .row .hint{line-height:1.45;margin-top:2px}
+
+  /* data tables (manage, monitor) */
+  table.dtable{table-layout:fixed;width:100%}
+  table.dtable th{height:40px;padding:0 var(--px);background:color-mix(in srgb,var(--surface) 60%,var(--bg));font-weight:500;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;top:0;z-index:1}
+  table.dtable td{height:44px;padding:0 var(--px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+  table.dtable tr:last-child td{border-bottom:0}
+  td.code,th.code{font-family:var(--mono);font-size:.8rem;direction:ltr;unicode-bidi:isolate;text-align:right}
+  [dir="ltr"] td.code,[dir="ltr"] th.code{text-align:left}
+  td.num{font-variant-numeric:tabular-nums}
+  .cellflex{display:flex;gap:8px;align-items:center}
+  .tscroll{overflow-x:auto}
+  .tmsg{padding:20px var(--px);color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:10px}
+
+  /* top bar: same on every page, fixed height */
+  .topbar{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;height:var(--tb);padding:0;
+    position:sticky;top:0;background:var(--bg);z-index:20;min-width:0}
+  .tb-start{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;min-width:0;flex:1 1 auto;overflow:hidden}
+  .tb-start h1{font-size:1.4rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+  .tb-start .sub{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .crumb{display:flex;align-items:baseline;gap:10px;font-size:1.05rem;white-space:nowrap;min-width:0}
+  .crumb a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .crumb a:hover{color:var(--text)}
+  .crumb span{color:var(--muted)}
+  .crumb b{font-size:1.35rem;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+  .back{display:inline-grid;place-items:center;width:var(--bh-sm);height:var(--bh-sm);border-radius:9px;flex:none;
+    color:var(--muted);border:1px solid var(--line);text-decoration:none}
+  .back:hover{color:var(--text);border-color:var(--muted)}
+  .tb-end{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex-wrap:nowrap;flex:none}
+  .tb-status{font-size:.78rem;color:var(--muted);display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .tb-status.err{color:var(--bad)}
+  #tbExtra:empty{display:none}
+
+  /* home: health hero */
+  .hero{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 28px;
+    display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+  .hero.ok{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+  .hero.warn{border-color:color-mix(in srgb,var(--warn) 75%,var(--line))}
+  .hero.bad{border-color:color-mix(in srgb,var(--bad) 75%,var(--line))}
+  .hero-main{flex:1 1 520px;min-width:0}
+  .hl{font-size:1.55rem;font-weight:700;display:flex;align-items:center;gap:12px;letter-spacing:-.01em;min-width:0}
+  .hl .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hl .dot{width:11px;height:11px}
+  .hsub{color:var(--muted);font-size:.86rem;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;background:var(--surface-2);height:30px;
+    border:1px solid var(--line);border-radius:99px;padding:0 12px;white-space:nowrap;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis}
+  .pill .ic{width:15px;height:15px}
+  .pill.ok .ic{color:var(--ok)} .pill.warn .ic{color:var(--warn)} .pill.bad .ic{color:var(--bad)} .pill.info .ic{color:var(--info)}
+  .hero-acts{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .hero-acts button,.hero-acts .btn{height:42px;padding:0 18px;font-size:.9rem;border-radius:10px}
+  .running{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;color:var(--info);margin-top:8px}
+  .errline{display:flex;align-items:center;gap:10px;color:var(--bad);font-weight:600;flex-wrap:wrap}
+  .errline .ic{color:var(--bad)}
+  .errline button{font-weight:400}
+  .label{color:var(--muted);font-size:.9rem;margin:0;line-height:1.4}
+
+  /* home: cards (equal heights) */
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:var(--gap)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;min-height:200px;min-width:0;
+    display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;transition:border-color .12s,background .12s}
+  .card:hover,.card:focus-visible{border-color:color-mix(in srgb,var(--text) 30%,var(--line));background:color-mix(in srgb,var(--surface) 85%,var(--surface-2));outline:none}
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .ibox{width:40px;height:40px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--text)}
+  .ibox .ic{width:19px;height:19px}
+  .card-arrow{color:var(--muted);width:17px;height:17px}
+  .card h3{font-size:1.12rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card p{color:var(--muted);font-size:.85rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .stat{font-size:.8rem;display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px;height:32px;white-space:nowrap;overflow:hidden}
+  .card.warn{border-color:color-mix(in srgb,var(--warn) 75%,var(--line));background:color-mix(in srgb,var(--warn) 4%,var(--surface))}
+  .card.warn .ibox{background:var(--warn-soft);color:var(--warn)}
+  .card.warn .stat{color:var(--warn)}
+  .card.bad .stat{color:var(--bad)}
+
+  /* sessions page */
+  #banners{display:flex;flex-direction:column;gap:12px}
+  #banners:empty{display:none}
+  .banner{border:1px solid color-mix(in srgb,var(--warn) 80%,var(--line));background:color-mix(in srgb,var(--warn) 7%,var(--surface));
+    border-radius:var(--r);padding:12px 20px;min-height:var(--ph);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .banner.bad{border-color:color-mix(in srgb,var(--bad) 80%,var(--line));background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
+  .banner .bn-txt{flex:1 1 360px;min-width:0}
+  .banner b{color:var(--warn);font-size:.95rem}
+  .banner .muted{font-size:.8rem;margin-top:2px}
+  .bn-act{display:flex;gap:8px;align-items:center;min-width:0;flex-wrap:nowrap}
+  .monobox{font-family:var(--mono);font-size:.8rem;background:#0E0D0C;border-radius:8px;padding:0 12px;height:var(--bh);line-height:var(--bh);direction:ltr;
+    unicode-bidi:isolate;max-width:min(320px,60vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;
+    text-decoration:none;color:var(--text)}
+  a.monobox:hover{color:var(--accent)}
+  .ses-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--gap);align-items:stretch}
+  table.stable{table-layout:fixed;width:100%}
+  table.stable col.c-st{width:190px} table.stable col.c-rc{width:180px}
+  table.stable col.c-last{width:120px} table.stable col.c-act{width:252px}
+  table.stable th{height:40px;background:color-mix(in srgb,var(--surface) 60%,var(--bg));padding:0 16px;font-weight:500;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  table.stable td{height:56px;padding:0 16px;font-size:.85rem;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  table.stable th:first-child,table.stable td:first-child{padding-inline-start:var(--px)}
+  table.stable tr:last-child td{border-bottom:0}
+  table.stable tr.hot td{background:color-mix(in srgb,var(--bad) 5%,transparent)}
+  table.stable td.nm{font-family:var(--mono);font-size:.86rem;direction:ltr;text-align:right;unicode-bidi:isolate}
+  [dir="ltr"] table.stable td.nm{text-align:left}
+  .st,.rcs{display:flex;align-items:center;gap:8px;min-width:0}
+  .st .tx,.rcs .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .st.warn{color:var(--warn)} .st.muted{color:var(--muted)}
+  .rcs .ic{width:15px;height:15px}
+  .rcs.ok{color:var(--ok)} .rcs.bad{color:var(--bad)} .rcs.muted{color:var(--muted)}
+  .acts-cell{display:flex;gap:8px;align-items:center;justify-content:flex-start}
+  .acts-cell .pri{min-width:126px}
+  /* system checks: compact rows in one panel */
+  .chk{display:grid;grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:center;
+    padding:12px var(--px);border-bottom:1px solid var(--line);min-height:62px}
+  .chk:last-child{border-bottom:0}
+  .chk>.ic{width:16px;height:16px;color:var(--muted)}
+  .chk.ok>.ic{color:var(--ok)} .chk.warn>.ic{color:var(--warn)} .chk.bad>.ic{color:var(--bad)} .chk.info>.ic{color:var(--info)}
+  .chk.warn{background:color-mix(in srgb,var(--warn) 6%,transparent)}
+  .chk.bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
+  .chk>b{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .chk .d,.chk .a{grid-column:2/4}
+  .chk .d{color:var(--muted);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .chk .a{margin-top:6px;display:flex;gap:8px}
+  .chk .tmsg,.chk .errline{grid-column:1/4;padding:0}
+  .lv{font-size:.7rem;height:22px;display:inline-flex;align-items:center;padding:0 9px;border-radius:99px;white-space:nowrap}
+  .lv.ok{background:var(--good-soft);color:var(--ok)} .lv.warn{background:var(--warn-soft);color:var(--warn)}
+  .lv.bad{background:var(--bad-soft);color:var(--bad)} .lv.info{background:var(--blue-soft);color:var(--info)}
+
+  /* log viewer: fixed 320px on #/sessions, remaining viewport on #/logs */
+  .logs .panel-h .ttl{flex:none}
+  .ltabs{display:flex;gap:4px;flex:none}
+  .ltabs button{border:none;background:none;color:var(--muted);height:var(--bh-sm);padding:0 12px;font-size:.82rem}
+  .ltabs button:hover{color:var(--text)}
+  .ltabs button.on{background:var(--surface-2);color:var(--text)}
+  .logs-tools{display:flex;gap:8px;align-items:center;margin-inline-start:auto;flex:none}
+  .logs-tools input[type=text]{width:200px;background:var(--log-bg);border-color:var(--log-bg)}
+  .logbody{background:var(--log-bg);font-family:var(--mono);font-size:.79rem;line-height:1.75;padding:12px 20px;
+    height:320px;flex:none;overflow:auto;direction:ltr;text-align:left;border-radius:0 0 var(--r) var(--r)}
+  #page-logs.on{height:calc(100vh - var(--tb) - 32px);min-height:420px}
+  #slotLogPage{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .logs.full{flex:1 1 auto;min-height:0}
+  .logs.full .logbody{flex:1 1 0;height:auto;min-height:200px}
+  .ll{white-space:pre-wrap;word-break:break-word}
+  .ll .ts{color:var(--muted);margin-right:14px}
+  .ll .src{color:var(--muted);margin-right:10px;opacity:.8}
+  .ll.bad .m{color:var(--bad)} .ll.warn .m{color:var(--warn)} .ll.ok .m{color:var(--ok)} .ll.info .m{color:var(--text)}
+  .logbody .tmsg{padding:6px 0}
+  .logbody .errline{font-family:var(--font);margin-bottom:8px}
+
+  /* new session page */
+  .presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));grid-auto-rows:1fr;gap:16px}
+  .preset{background:color-mix(in srgb,var(--surface) 55%,var(--bg));border:1px solid var(--line);border-radius:12px;
+    box-shadow:none;padding:16px;display:flex;flex-direction:column;gap:8px;min-height:188px;min-width:0;
+    border-inline-start:4px solid var(--line)}
+  .preset .pc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0;height:28px}
+  .preset .pc-head b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .preset .pc-tools{display:flex;gap:2px;align-items:center;flex:none}
+  .preset .d{font-size:.78rem;color:var(--muted);flex:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+  .preset .a{display:flex;gap:8px;margin-top:auto;flex-wrap:nowrap;align-items:center}
+  .preset .chips{display:flex;gap:4px;flex-wrap:wrap}
+  .chip{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .empty{color:var(--muted);font-size:.85rem;padding:4px 0}
+  .brow{padding:16px 0;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:0}
+  .brow>.bt{font-size:.74rem;font-weight:600;margin-bottom:8px;display:flex;gap:6px;align-items:center;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .brow .exp{font-size:.73rem;color:var(--muted);margin-top:8px;line-height:1.5}
+  .cwd{flex:1 1 260px;width:auto!important;min-width:0}
+  #cModel{flex:0 1 220px;min-width:0}
+  .cmdline .cmd{display:block;white-space:pre-wrap;word-break:break-all;padding:9px 12px;line-height:1.5;min-height:var(--bh)}
+
+  /* manage + monitor */
+  .field-inline{display:flex;gap:8px;margin-top:8px;max-width:480px}
+  .field-inline input{flex:1 1 auto;min-width:0}
+  .settings-sel{width:220px}
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:var(--gap)}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px var(--px);box-shadow:none;
+    display:flex;flex-direction:column;gap:4px;min-height:116px;min-width:0}
+  .kpi .l{white-space:nowrap;overflow:hidden;min-width:0}
+  .kpi .n{margin-top:auto}
+  #chart{position:relative;min-height:280px;padding:0}
+  #chart>svg{position:absolute;inset:16px var(--px);display:block}
+  #chart>.tmsg{position:absolute;inset:0;align-items:flex-start}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;height:var(--bh-sm)}
+  .seg button{border:none;border-radius:0;font-size:.78rem;height:100%;padding:0 12px;color:var(--muted)}
+  .seg button.on{background:var(--ink);color:var(--bg)}
+  .guide{max-width:880px}
+
+  /* popover menu, toast variants, modals */
+  #menuPop{position:fixed;z-index:95;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+    padding:5px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:none}
+  #menuPop.on{display:block}
+  #menuPop button{display:flex;width:100%;justify-content:flex-start;border:none;background:none;height:36px;padding:0 12px;font-size:.84rem}
+  #menuPop button:hover{background:var(--surface);color:var(--text)}
+  #menuPop button.danger:hover{color:var(--bad)}
+  .toast.ok{background:var(--ok);color:#10200F}
+  .toast.bad{background:var(--bad);color:#fff}
+  .qrwrap{background:#fff;padding:10px;border-radius:12px;width:200px}
+  .qrwrap svg{width:100%;height:auto}
+  .linkrow{display:flex;gap:8px;align-items:center;margin:12px 0;flex-wrap:nowrap}
+  .linkrow .monobox{flex:1;max-width:100%}
+  .mhead{margin-bottom:12px}
+  .mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .centered{display:flex;justify-content:center;margin:8px 0}
+
+  /* session search (2026-10-15): top bar box, #/search page, fallen panel on #/sessions */
+  .tb-search{position:relative;display:flex;align-items:center;width:220px;flex:none;margin:0}
+  .tb-search .ic{position:absolute;inset-inline-start:11px;width:15px;height:15px;color:var(--muted);pointer-events:none}
+  .tb-search input[type=text]{height:var(--bh);padding-inline-start:34px;border-radius:10px;background:var(--surface)}
+  .sr-ctl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px var(--px);border-bottom:1px solid var(--line)}
+  .sr-q{position:relative;flex:1 1 360px;min-width:0;display:flex;align-items:center}
+  .sr-q>.ic{position:absolute;inset-inline-start:14px;width:18px;height:18px;color:var(--muted);pointer-events:none}
+  .sr-q input[type=text]{height:46px;font-size:1rem;padding-inline:44px;border-radius:10px;background:var(--bg)}
+  .sr-q>.spin{position:absolute;inset-inline-end:16px;color:var(--muted)}
+  .sr-opt{display:flex;gap:12px;align-items:center;flex:none;min-width:0}
+  .sr-tgl{display:flex;gap:8px;align-items:center;font-size:.85rem;height:var(--bh);cursor:pointer;white-space:nowrap}
+  .sr-chips{display:flex;gap:8px;flex-wrap:wrap;padding:12px var(--px);border-bottom:1px solid var(--line)}
+  .fchip{height:var(--bh-sm);padding:0 12px;border-radius:99px;font-size:.8rem;color:var(--muted);background:transparent}
+  .fchip b{font-weight:600;font-size:.72rem;background:var(--surface-2);border-radius:99px;padding:2px 8px;color:var(--text);
+    font-variant-numeric:tabular-nums;min-width:24px;text-align:center}
+  .fchip.on,.fchip.on:hover{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .fchip.on b{background:color-mix(in srgb,var(--bg) 18%,transparent);color:var(--bg)}
+  table.srtable col.c-where{width:300px} table.srtable col.c-dir{width:180px}
+  table.srtable col.c-when{width:120px} table.srtable col.c-sact{width:224px} table.srtable col.c-fact{width:150px}
+  table.srtable td{height:64px}
+  table.srtable.ftable td{height:52px}
+  table.srtable.busy tbody{opacity:.5;transition:opacity .15s}
+  .t2{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .t2>div{display:flex;gap:8px;align-items:center;min-width:0}
+  .t2 .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .t2 .l1{font-weight:500}
+  .t2 .l2{font-size:.76rem;color:var(--muted)}
+  .t2 .lv{flex:none}
+  .acts-cell .ib:last-child{margin-inline-start:auto}
+  .rs-what{background:var(--surface-2);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .rs-what b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rs-what .mono{font-size:.76rem;color:var(--muted);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:1100px){
+    .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ses-grid,.cols,.cols.wide{grid-template-columns:minmax(0,1fr)}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .logs-tools .lbl{display:none}
+    .logs-tools input[type=text]{width:160px}
+  }
+  @media (max-width:1000px){
+    table.stable col.c-st{width:130px} table.stable col.c-rc{width:130px} table.stable col.c-last{width:100px} table.stable col.c-act{width:246px}
+    table.stable th,table.stable td{padding:0 12px}
+    table.srtable col.c-where{width:196px} table.srtable col.c-dir{width:110px}
+    table.srtable col.c-when{width:92px} table.srtable col.c-sact{width:216px}
+    .tb-search{width:170px}
+  }
+  @media (max-width:640px){
+    .cards,.kpis{grid-template-columns:minmax(0,1fr)}
+    .panel-h{height:auto;min-height:var(--ph);flex-wrap:wrap;padding:12px 16px}
+    .topbar{height:auto;min-height:var(--tb);flex-wrap:wrap;padding:12px 0}
+    .logs-tools input[type=text]{width:140px}
+    .hl{font-size:1.25rem}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- header keeps a FIXED layout — it does not flip with the content language -->
-  <header dir="rtl">
-    <img src="/icon.svg" alt="">
-    <div><h1>Claude Control</h1><div class="sub" id="clock"></div></div>
-    <nav>
-      <button id="tabbtn-new" class="on" onclick="showTab('new')"></button>
-      <button id="tabbtn-manage" onclick="showTab('manage')"></button>
-      <button id="tabbtn-monitor" onclick="showTab('monitor')"></button>
-      <button id="tabbtn-guide" onclick="showTab('guide')"></button>
-    </nav>
-    <button class="flag" id="fl-he" onclick="setLang('he')" title="עברית">🇮🇱</button>
-    <button class="flag" id="fl-en" onclick="setLang('en')" title="English">🇬🇧</button>
-    <button class="power" id="refreshBtn" onclick="refreshAll(this)">⟳</button>
-    <button class="power" id="powerBtn" onclick="shutdown()">⏻</button>
+  <header class="topbar" id="topbar">
+    <div class="tb-start" id="tbStart"></div>
+    <div class="tb-end">
+      <label class="tb-search" id="tbSearch"><span id="tbSearchIc"></span>
+        <input type="text" id="tbQ" dir="auto" autocomplete="off" spellcheck="false" onkeydown="tbSearchKey(event)"></label>
+      <span class="tb-status" id="tbStatus"></span>
+      <span id="tbExtra"></span>
+      <button class="ib" id="langBtn" onclick="setLang(L==='he'?'en':'he')"></button>
+      <button class="ib" id="refreshBtn" onclick="refreshAll(this)"></button>
+      <button class="ib danger" id="powerBtn" onclick="shutdown()"></button>
+    </div>
   </header>
-
-  <div id="content"></div>
+  <main id="content"></main>
 </div>
 
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
+<div id="menuPop" role="menu"></div>
 <div id="modals"></div>
 
 <script>
@@ -301,8 +626,8 @@ he:{
  remote_sec:"עבודה מהטלפון",
  remote_sec_tip:"שתי דרכים: אפליקציית Claude הרשמית (remote-control, עובד מכל מקום) או כניסת SSH ישירה לסשן tmux (אותה רשת / Tailscale).",
  rc_row:"אפליקציית Claude (רשמי)",
- rc_hint:"מריץ ‎claude remote-control — סרוק את ה-QR שיופיע בטאב שנפתח עם אפליקציית Claude בטלפון, או המשך ב-claude.ai/code. עובד מכל רשת.",
- rc_btn:"הפעל remote-control",
+ rc_hint:"משתמש ב-daemon הקיים של remote-control ומחזיר קישור לסביבה. פתח אותו בטלפון או סרוק את ה-QR. עובד מכל רשת.",
+ rc_btn:"קבל קישור לטלפון",
  rc_done:"נפתח ✓ — סרוק את ה-QR בטאב שנוצר עם אפליקציית Claude",
  ssh_row:"‏SSH ישיר לסשן tmux",
  ssh_hint:"בפתיחת כל סשן סמן \"הצג QR\" — הסריקה נותנת את פקודת החיבור המלאה לאותו סשן חי. דורש אותה רשת ו-Remote Login פעיל.",
@@ -314,6 +639,67 @@ he:{
  bp_cl_n:"קלאסי + סקילים",bp_cl_d:"רזה עם כל הסקילים — ברירת מחדל יומיומית",
  bp_mcp_n:"קלאסי + MCP מקומי",bp_mcp_d:"סקילים + כל פרופילי ה-MCP המקומיים",
  bp_full_n:"הכול",bp_full_d:"פלאגינים + ‎.mcp.json של הפרויקט — כמו claude רגיל",
+ /* redesign 2026-10: home, sessions, logs */
+ home:"בית",back:"חזרה לבית",machine:"מחשב",
+ pg_home:"בית",pg_sessions:"סשנים ושחזור",pg_new:"סשן חדש",pg_logs:"לוגים",pg_monitor:"ניטור שימוש",pg_manage:"ניהול",pg_guide:"הוראות",
+ cd_sessions:"מה רץ, מה מחובר לטלפון ומה נפל. שחזור והפעלה מחדש בלחיצה.",
+ cd_new:"פרופילים מוכנים או בנייה ידנית. פתיחה בלחיצה ב-tmux.",
+ cd_logs:"זרם חי, סינון וחיפוש. Watchdog, שחזור, daemon ו-FortiClient.",
+ cd_monitor:"טוקנים ועלות לפי יום, מודל ופרויקט.",
+ cd_manage:"כללים, סקילים וקבצים, מודל, MCP, hooks, תוספים.",
+ cd_guide:"מה עושה כל חלק, ומה עושים כשמשהו לא עובד.",
+ upd_ago:"עודכן לפני {n} שניות · מתעדכן לבד",live_5s:"חי · כל 5 שניות",check_now:"בדוק עכשיו",
+ lang_tip:"English",power_tip:"כיבוי שרת הדשבורד",
+ checking:"בודק את המערכת…",all_ok:"הכל תקין",all_ok_sub:"כל הסשנים רצים ומחוברים.",attention:"שים לב",
+ issues_1:"בעיה אחת",issues_n:"{n} בעיות",can_auto:"אפשר לתקן אוטומטית",need_you:"נדרשת פעולה ממך",
+ action_from_you:"פעולה ממך",fix_all_auto:"תקן הכל אוטומטית",details:"פרטים",where_to:"לאן הולכים?",
+ st_ses:"{c} מתוך {n} מחוברים",st_fix:"{n} דורש תיקון",profiles_c:"פרופילים",events_hour:"אירועים בשעה האחרונה",
+ week_l:"שבוע",today_l:"היום",up_to_date:"עדכני",update_avail:"יש עדכון",
+ no_server:"השרת לא עונה",retry:"נסה שוב",running_action:"מבצע",need_you_t:"נדרש ממך",copied_short:"הועתק",
+ ses_title:"סשנים בשחזור אוטומטי",ses_sub:"{n} ברשימה · {c} מחוברים לטלפון · חוזרים לבד אחרי הפעלה מחדש",
+ restore_all:"שחזר את כל הנופלים",add_ses:"הוסף סשן",
+ col_name:"שם",col_state:"מצב",col_phone:"טלפון (Remote Control)",col_last:"פעילות אחרונה",col_actions:"פעולות",
+ st_active:"פעיל",st_waiting:"ממתין לאישור שלך",st_stopped:"לא רץ",
+ rc_connected:"מחובר",rc_disconnected:"מנותק",rc_unknown:"לא ידוע",
+ rc_unknown_tip:"אין הודעת ניתוק במסך של הסשן. אם הטלפון לא מראה אותו, לחץ כדי לחבר מחדש. ההיסטוריה נשמרת.",
+ reconnect:"חבר מחדש",start:"הפעל",open_approve:"פתח לאישור",open_phone:"פתח בטלפון",
+ copy_attach:"העתק פקודת tmux attach",attach_copied:"הפקודה הועתקה - הדבק אותה בטרמינל",
+ more:"עוד פעולות",restart:"הפעל מחדש",drop:"הסר מהשחזור האוטומטי",
+ confirm_restart:"להפעיל מחדש את {n}? השיחה תמשיך מאותה נקודה.",
+ confirm_drop:"להסיר את {n} מהשחזור האוטומטי? הסשן עצמו לא נמחק.",
+ confirm_t:"אישור פעולה",yes:"כן, בצע",
+ ses_empty:"אין סשנים ברשימת השחזור. הוסף סשן כדי שיחזור לבד אחרי הפעלה מחדש.",
+ sys_t:"מערכת",lv_ok:"תקין",lv_warn:"שים לב",lv_bad:"תקלה",lv_info:"מידע",
+ log_t:"לוג חי",log_all:"הכל",log_resume:"שחזור",log_filter:"סינון…",pause:"עצור",resume:"המשך",
+ log_empty:"אין שורות להצגה.",done:"בוצע",failed:"הפעולה נכשלה",
+ add_ses_t:"הוספת סשן לשחזור האוטומטי",add_ses_exp:"הסשן יחזור לבד אחרי הפעלה מחדש של המחשב, עם Remote Control פעיל.",
+ ses_name:"שם (שם החלון ב-tmux)",ses_uuid:"מזהה סשן (session id)",ses_dir:"תיקיית עבודה",name_req:"חסר שם",
+ close:"סגור",rc_link_t:"קישור לעבודה מהטלפון",rc_link_exp:"פתח את הקישור בטלפון או סרוק את ה-QR. הסשנים מופיעים באפליקציית Claude.",
+ rc_no_link:"ה-daemon פועל, אבל עדיין אין קישור. נסה שוב בעוד כמה שניות.",
+ act_fix_all:"תקן אוטומטית",act_restart_daemon:"הפעל daemon מחדש",act_resume_missing:"הפעל את החסרים",act_restart_session:"הפעל מחדש",
+ rel_now:"עכשיו",rel_m:"לפני {n} דק'",rel_h1:"לפני שעה",rel_h:"לפני {n} שע'",rel_d1:"אתמול",rel_d:"לפני {n} ימים",
+ /* session search 2026-10-15 */
+ pg_search:"חיפוש סשנים",cd_search:"מצא כל סשן לפי שם, הודעה או תוכן, ותראה איפה הוא רץ",
+ tb_search_ph:"חיפוש סשן…",tb_search_tip:"Enter פותח את חיפוש הסשנים",
+ sr_tip:"מחפש בכל השיחות של Claude Code במחשב הזה: כותרת, הודעה ראשונה, מזהה ותיקייה. מראה אם הסשן רץ ואיפה (tmux או אפליקציית Claude).",
+ sr_ph:"חפש לפי שם, הודעה ראשונה, מזהה או תיקייה…",
+ sr_content:"חפש גם בתוכן השיחות",sr_content_tip:"סורק את כל הטקסט של השיחות. איטי יותר (1-4 שניות), ולכן רץ רק ב-Enter או כשמדליקים את המתג.",
+ sr_days:"טווח זמן",days_1:"יום אחרון",days_n:"{n} ימים אחרונים",
+ f_all:"הכל",f_running:"רצים",f_fallen:"נפלו",f_list:"ברשימת השחזור",f_stopped:"לא רצים",
+ col_session:"סשן",col_where:"איפה רץ",col_folder:"תיקייה",
+ in_content:"נמצא בתוכן",untitled:"(ללא כותרת)",not_running:"לא רץ",fallen_pill:"נפל",in_app:"פתוח באפליקציה",
+ running_l:"רץ",running_unknown:"רץ, מיקום לא ידוע",in_list_l:"ברשימת השחזור: {n}",
+ copy_attach_btn:"העתק פקודת חיבור",resume_btn:"החזר",copy_id:"העתק מזהה",copy_resume:"העתק פקודת resume",
+ sr_searching:"מחפש…",sr_searching_content:"מחפש בתוכן השיחות…",sr_enter_hint:"לחץ Enter כדי לחפש גם בתוכן השיחות",
+ sr_recent:"{n} סשנים אחרונים",sr_found_1:"תוצאה אחת מתוך {s} סשנים",sr_found:"{n} תוצאות מתוך {s} סשנים",
+ sr_none:"לא נמצא. נסה לחפש גם בתוכן השיחות",sr_none_content:"לא נמצא, גם בתוכן השיחות. נסה טווח ימים ארוך יותר.",
+ sr_turn_on:"חפש בתוכן",sr_filter_none:"אין תוצאות בסינון הזה.",sr_empty:"אין סשנים בטווח הזה.",
+ rs_t:"החזרת סשן",rs_exp:"הסשן ייפתח ב-tmux (חלון בסשן rc-resume) עם גישה מהטלפון (Remote Control), ויתווסף לרשימת השחזור האוטומטי כדי שיחזור לבד אחרי הפעלה מחדש של המחשב.",
+ rs_name:"שם (שם החלון ב-tmux וברשימת השחזור)",rs_name_exp:"אותיות באנגלית, ספרות, נקודה, קו תחתון ומקף. עד 40 תווים.",
+ rs_bad_name:"שם לא תקין: רק A-Z, 0-9, נקודה, _ ו-, עד 40 תווים",
+ fallen_t:"נפלו לאחרונה",fallen_tip:"סשנים שעבדו ב-24 השעות האחרונות, לא רצים עכשיו ולא נמצאים ברשימת השחזור.",
+ fallen_sub:"{n} סשנים מהיממה האחרונה לא רצים",fallen_more:"מוצגים {n} האחרונים",search_more:"חפש עוד",
+ st_fallen:"{n} נפלו ביממה האחרונה",st_no_fallen:"אין סשנים שנפלו ביממה האחרונה",
  dow:["א'","ב'","ג'","ד'","ה'","ו'","ש'"],
 },
 en:{
@@ -424,8 +810,8 @@ en:{
  remote_sec:"Work from your phone",
  remote_sec_tip:"Two ways: the official Claude app (remote-control, works from anywhere) or direct SSH into a tmux session (same network / Tailscale).",
  rc_row:"Claude app (official)",
- rc_hint:"Runs `claude remote-control` — scan the QR that appears in the opened tab with the Claude mobile app, or continue at claude.ai/code. Works from any network.",
- rc_btn:"Start remote-control",
+ rc_hint:"Uses the running remote-control daemon and returns the environment link. Open it on the phone or scan the QR. Works from any network.",
+ rc_btn:"Get phone link",
  rc_done:"Started ✓ — scan the QR in the new tab with the Claude app",
  ssh_row:"Direct SSH into a tmux session",
  ssh_hint:"When launching any session, tick \"Show QR\" — scanning yields the full connect command to that live session. Needs same network and Remote Login enabled.",
@@ -437,22 +823,88 @@ en:{
  bp_cl_n:"Classic + skills",bp_cl_d:"Lean with all skills — the everyday default",
  bp_mcp_n:"Classic + local MCP",bp_mcp_d:"Skills + all local MCP profiles",
  bp_full_n:"Everything",bp_full_d:"Plugins + the project's .mcp.json — like plain claude",
+ /* redesign 2026-10: home, sessions, logs */
+ home:"Home",back:"Back to home",machine:"Machine",
+ pg_home:"Home",pg_sessions:"Sessions & restore",pg_new:"New session",pg_logs:"Logs",pg_monitor:"Usage monitor",pg_manage:"Manage",pg_guide:"Guide",
+ cd_sessions:"What runs, what is linked to the phone and what fell. Restore and restart in one click.",
+ cd_new:"Ready profiles or a custom build. Opens in tmux in one click.",
+ cd_logs:"Live stream, filter and search. Watchdog, restore, daemon and FortiClient.",
+ cd_monitor:"Tokens and cost by day, model and project.",
+ cd_manage:"Rules, skills and files, model, MCP, hooks, plugins.",
+ cd_guide:"What each part does, and what to do when something breaks.",
+ upd_ago:"Updated {n}s ago · updates by itself",live_5s:"Live · every 5 seconds",check_now:"Check now",
+ lang_tip:"עברית",power_tip:"Shut down the dashboard server",
+ checking:"Checking the system…",all_ok:"All good",all_ok_sub:"All sessions are running and connected.",attention:"Attention",
+ issues_1:"1 issue",issues_n:"{n} issues",can_auto:"can be fixed automatically",need_you:"needs your action",
+ action_from_you:"Your action",fix_all_auto:"Fix all automatically",details:"Details",where_to:"Where to?",
+ st_ses:"{c} of {n} connected",st_fix:"{n} need fixing",profiles_c:"profiles",events_hour:"events in the last hour",
+ week_l:"Week",today_l:"Today",up_to_date:"up to date",update_avail:"update available",
+ no_server:"The server is not responding",retry:"Retry",running_action:"Running",need_you_t:"Needed from you",copied_short:"Copied",
+ ses_title:"Sessions under auto-restore",ses_sub:"{n} listed · {c} linked to the phone · come back by themselves after a restart",
+ restore_all:"Restore all fallen",add_ses:"Add session",
+ col_name:"Name",col_state:"State",col_phone:"Phone (Remote Control)",col_last:"Last activity",col_actions:"Actions",
+ st_active:"Active",st_waiting:"Waiting for your approval",st_stopped:"Not running",
+ rc_connected:"Connected",rc_disconnected:"Disconnected",rc_unknown:"Unknown",
+ rc_unknown_tip:"No disconnect message on the session screen. If your phone does not show it, click to reconnect. History is kept.",
+ reconnect:"Reconnect",start:"Start",open_approve:"Open to approve",open_phone:"Open on phone",
+ copy_attach:"Copy the tmux attach command",attach_copied:"Command copied - paste it in a terminal",
+ more:"More actions",restart:"Restart",drop:"Remove from auto-restore",
+ confirm_restart:"Restart {n}? The conversation continues from the same point.",
+ confirm_drop:"Remove {n} from auto-restore? The session itself is not deleted.",
+ confirm_t:"Confirm action",yes:"Yes, do it",
+ ses_empty:"No sessions in the restore list. Add a session so it comes back by itself after a restart.",
+ sys_t:"System",lv_ok:"OK",lv_warn:"Attention",lv_bad:"Fault",lv_info:"Info",
+ log_t:"Live log",log_all:"All",log_resume:"Restore",log_filter:"Filter…",pause:"Pause",resume:"Resume",
+ log_empty:"No lines to show.",done:"Done",failed:"The action failed",
+ add_ses_t:"Add a session to auto-restore",add_ses_exp:"The session comes back by itself after the computer restarts, with Remote Control on.",
+ ses_name:"Name (tmux window name)",ses_uuid:"Session id",ses_dir:"Working folder",name_req:"Name is missing",
+ close:"Close",rc_link_t:"Phone link",rc_link_exp:"Open the link on the phone or scan the QR. The sessions show up in the Claude app.",
+ rc_no_link:"The daemon is running, but there is no link yet. Try again in a few seconds.",
+ act_fix_all:"Fix automatically",act_restart_daemon:"Restart daemon",act_resume_missing:"Start the missing ones",act_restart_session:"Restart",
+ rel_now:"just now",rel_m:"{n} min ago",rel_h1:"1 hour ago",rel_h:"{n} h ago",rel_d1:"yesterday",rel_d:"{n} days ago",
+ /* session search 2026-10-15 */
+ pg_search:"Session search",cd_search:"Find any session by name, message or content, and see where it runs",
+ tb_search_ph:"Find a session…",tb_search_tip:"Enter opens session search",
+ sr_tip:"Searches all Claude Code conversations on this Mac: title, first message, id and folder. Shows if the session runs and where (tmux or the Claude app).",
+ sr_ph:"Search by name, first message, id or folder…",
+ sr_content:"Also search conversation content",sr_content_tip:"Scans the full text of every conversation. Slower (1-4 seconds), so it runs only on Enter or when you turn the switch on.",
+ sr_days:"Time range",days_1:"Last day",days_n:"Last {n} days",
+ f_all:"All",f_running:"Running",f_fallen:"Fell",f_list:"In restore list",f_stopped:"Not running",
+ col_session:"Session",col_where:"Where it runs",col_folder:"Folder",
+ in_content:"Found in content",untitled:"(no title)",not_running:"Not running",fallen_pill:"Fell",in_app:"Open in the app",
+ running_l:"Running",running_unknown:"Running, place unknown",in_list_l:"In restore list: {n}",
+ copy_attach_btn:"Copy attach",resume_btn:"Bring back",copy_id:"Copy id",copy_resume:"Copy resume command",
+ sr_searching:"Searching…",sr_searching_content:"Searching conversation content…",sr_enter_hint:"Press Enter to also search conversation content",
+ sr_recent:"{n} recent sessions",sr_found_1:"1 result out of {s} sessions",sr_found:"{n} results out of {s} sessions",
+ sr_none:"Nothing found. Try to also search conversation content",sr_none_content:"Nothing found, also not in content. Try a longer time range.",
+ sr_turn_on:"Search content",sr_filter_none:"No results with this filter.",sr_empty:"No sessions in this range.",
+ rs_t:"Bring a session back",rs_exp:"The session opens in tmux (a window in the rc-resume session) with phone access (Remote Control), and joins the auto-restore list so it comes back by itself after the computer restarts.",
+ rs_name:"Name (tmux window and restore list name)",rs_name_exp:"English letters, digits, dot, underscore and hyphen. Up to 40 characters.",
+ rs_bad_name:"Bad name: only A-Z, 0-9, dot, _ and -, up to 40 characters",
+ fallen_t:"Fell recently",fallen_tip:"Sessions that worked in the last 24 hours, do not run now and are not in the restore list.",
+ fallen_sub:"{n} sessions from the last day are not running",fallen_more:"showing the latest {n}",search_more:"Search more",
+ st_fallen:"{n} fell in the last day",st_no_fallen:"No sessions fell in the last day",
  dow:["Su","Mo","Tu","We","Th","Fr","Sa"],
 }};
 let L=localStorage.getItem("cc-lang")||"he";
 const t=k=>I18N[L][k]??k;
 
 /* ═══════════ state ═══════════ */
-let S=null,M=null,pendingLaunch=null,editingId=null,editingRule=null,metric="output",activeTab="new";
+let S=null,M=null,pendingLaunch=null,editingId=null,editingRule=null,metric="output",activeTab="home";
 const $=id=>document.getElementById(id);
-const toast=m=>{const x=$("toast");x.textContent=m;x.classList.add("on");setTimeout(()=>x.classList.remove("on"),2200);};
+let toastTimer=null;
+const toast=(m,kind)=>{const x=$("toast");x.textContent=m;x.className="toast on"+(kind?" "+kind:"");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>x.classList.remove("on"),kind==="bad"?4200:2600);};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtTok=n=>{n=n||0;return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e4?Math.round(n/1e3)+"K":n>=1e3?(n/1e3).toFixed(1)+"K":""+n;};
 const barCls=p=>p>=85?"hot":p>=60?"warn":"";
 const Q=(tipKey)=>`<span class="q" data-tip="${esc(t(tipKey))}">?</span>`;
+// shared panel header: one height, one font, title (+tip, +sub line) on the start side, actions on the end side
+const PH=(title,tip="",acts="",subId="")=>`<div class="panel-h"><div class="ttl"><h2><span class="tx">${title}</span>${tip?Q(tip):""}</h2>`
+  +`${subId?`<div class="sub" id="${subId}"></div>`:""}</div>${acts?`<div class="acts">${acts}</div>`:""}</div>`;
 
 document.addEventListener("mouseover",e=>{
-  const q=e.target.closest(".q");const tip=$("tip");
+  const q=e.target.closest("[data-tip]");const tip=$("tip");
   if(!q){tip.style.display="none";return;}
   tip.textContent=q.dataset.tip||"";tip.style.display="block";
   const r=q.getBoundingClientRect(),tw=tip.offsetWidth;
@@ -471,25 +923,20 @@ async function api(path,body){
 function setLang(l){
   L=l;localStorage.setItem("cc-lang",l);
   document.documentElement.lang=l;
-  buildStatic();tick();renderAll();
+  buildStatic();renderAll();route(true);
+  renderRc();renderLogs(true);
   if(activeTab==="monitor"&&M)renderMonitor();
-}
-function showTab(tab){
-  activeTab=tab;
-  for(const x of ["new","manage","monitor","guide"]){
-    const el=$("tab-"+x);if(el)el.classList.toggle("on",x===tab);
-    $("tabbtn-"+x).classList.toggle("on",x===tab);
-  }
-  if(tab==="monitor")loadMonitor();
 }
 async function refreshAll(btn){
   btn.style.opacity=".4";
   try{
+    loadRc();if(activeTab==="logs"||activeTab==="sessions")loadLogs(true);
     const s=await fetch("/api/state").then(r=>r.json());S=s;renderAll();
     if(activeTab==="monitor"||M){M=await fetch("/api/monitor?force=1").then(r=>r.json());
       if(activeTab==="monitor")renderMonitor();}
     toast(t("refreshed"));
-  }finally{btn.style.opacity="";}
+  }catch(e){toast(t("no_server"),"bad");}
+  finally{btn.style.opacity="";}
 }
 function openMcpAdd(){$("mcpName").value="";$("mcpUrl").value="";$("mcpCmd").value="";$("ovMcp").classList.add("on");}
 function saveMcp(){
@@ -541,118 +988,187 @@ document.addEventListener("click",e=>{if(!e.target.closest(".dd"))
 /* ═══════════ static skeleton (rebuilt on language switch) ═══════════ */
 function buildStatic(){
   const dir=L==="he"?"rtl":"ltr";
-  $("fl-he").classList.toggle("on",L==="he");
-  $("fl-en").classList.toggle("on",L==="en");
-  for(const x of ["new","manage","monitor","guide"])$("tabbtn-"+x).textContent=t("tab_"+x);
+  $("topbar").dir=dir;$("menuPop").dir=dir;
+  $("langBtn").innerHTML=ic("lang");$("langBtn").dataset.tip=t("lang_tip");$("langBtn").setAttribute("aria-label",t("lang_tip"));
+  $("refreshBtn").innerHTML=ic("refresh");$("refreshBtn").dataset.tip=t("refresh_tip");$("refreshBtn").setAttribute("aria-label",t("refresh_tip"));
+  $("tbSearchIc").innerHTML=ic("search");$("tbQ").placeholder=t("tb_search_ph");
+  $("tbQ").setAttribute("aria-label",t("pg_search"));$("tbSearch").title=t("tb_search_tip");
+  $("powerBtn").innerHTML=ic("power");$("powerBtn").dataset.tip=t("power_tip");$("powerBtn").setAttribute("aria-label",t("power_tip"));
   const c=$("content");c.dir=dir;
+  const pg=p=>`page${activeTab===p?" on":""}`;
   c.innerHTML=`
-  <div class="tab ${activeTab==="new"?"on":""}" id="tab-new">
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
-      <b style="color:var(--blue)">${t("generic")}</b>${Q("generic_tip")}</div>
-    <div class="grid g3" id="presetsGeneric"></div>
-    <hr class="divider">
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
-      <b style="color:var(--good)">${t("mine")}</b>${Q("mine_tip")}
-      <button style="margin-inline-start:auto" onclick="editPreset(null)">${t("new_preset")}</button></div>
-    <div class="grid g3" id="presetsCustom"></div>
-    <section style="margin-top:1.2rem">
-      <div class="shead"><b>${t("custom")}</b>${Q("custom_tip")}
-        <span class="tag t-est" id="customEst" style="margin-inline-start:auto"></span></div>
-      <div class="sbody">
-        <div class="brow"><div class="bt">${t("comps")}</div>
-          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-            <div class="dd" id="ddMcp"><button class="ddbtn" onclick="toggleDd(event,'ddMcp')">${t("mcp_dd")} · <span id="cntMcp">0</span></button>
-              <div class="ddpanel" id="pnMcp"></div></div>${Q("mcp_tip")}
-            <div class="dd" id="ddRules"><button class="ddbtn" onclick="toggleDd(event,'ddRules')">${t("rules_dd")} · <span id="cntRules">0</span></button>
-              <div class="ddpanel" id="pnRules"></div></div>${Q("rules_tip")}
-            <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
-              <input type="checkbox" id="cSkills" checked onchange="updCmd()"> ${t("skills")}</label>${Q("skills_tip")}
-            <label style="display:flex;gap:.4rem;align-items:center;font-size:.86rem">
-              <input type="checkbox" id="cBare" onchange="updCmd()"> ${t("bare")}</label>${Q("bare_tip")}
-          </div>
-          <div class="exp">${t("comps_exp")}</div></div>
-        <div class="brow"><div class="bt">${t("env")}</div>
-          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-            <input type="text" id="cCwd" list="repoList" placeholder="${esc(t("cwd_ph"))}" dir="ltr"
-              style="max-width:330px" oninput="updCmd()">
-            <datalist id="repoList"></datalist>
-            <select id="cModel" onchange="updCmd()"></select></div>
-          <div class="exp">${t("env_exp")}</div></div>
-        <div class="brow"><div class="bt">${t("cmd")}</div>
-          <div class="cmdline"><span class="cmd" id="customCmd"></span></div>
-          <div style="display:flex;gap:.5rem;margin-top:.6rem">
-            <button class="primary" onclick="askTarget({custom:customSpec()})">${t("open_session")}</button>
-            <button onclick="copyCmd()">${t("copy")}</button>
-            <button onclick="saveAsPreset()">${t("save_preset")}</button></div></div>
-      </div>
-    </section>
-
-    <section style="margin-top:1.2rem">
-      <div class="shead"><b>${t("remote_sec")}</b>${Q("remote_sec_tip")}</div>
-      <div class="sbody">
-        <div class="row"><div><div class="name">${t("rc_row")}</div>
-          <div class="hint">${t("rc_hint")}</div></div>
-          <button class="primary" onclick="askTarget({remoteControl:true})">${t("rc_btn")}</button></div>
-        <div class="row"><div><div class="name">${t("ssh_row")}</div>
-          <div class="hint">${t("ssh_hint")}</div></div></div>
-      </div>
-    </section>
+  <div class="${pg("home")}" id="page-home">
+    <div class="hero" id="hero"></div>
+    <div class="label">${t("where_to")}</div>
+    <div class="cards">${HOME_CARDS.map(([p,i])=>`
+      <a class="card" id="card-${p}" href="${href(p)}">
+        <div class="card-top"><span class="ibox">${ic(i)}</span>${ic("arrow","ltr-flip card-arrow")}</div>
+        <h3>${t("pg_"+p)}</h3><p>${t("cd_"+p)}</p>
+        <div class="stat" id="stat-${p}"></div></a>`).join("")}
+    </div>
   </div>
 
-  <div class="tab ${activeTab==="manage"?"on":""}" id="tab-manage">
-    <section><div class="shead"><b>${t("acct")}</b>${Q("acct_tip")}</div>
-      <div class="sbody" id="account"></div></section>
-    <section><div class="shead"><b>${t("cc")}</b>${Q("cc_tip")}</div>
-      <div class="sbody" id="settings"></div></section>
-    <section><div class="shead"><b>${t("files")}</b>${Q("files_tip")}
-        <button style="margin-inline-start:auto" onclick="openFileAdd()">${t("add_file")}</button></div>
-      <div class="sbody" id="files"></div></section>
-    <section><div class="shead"><b>${t("mcp_sec")}</b>${Q("mcp_sec_tip")}
-        <button style="margin-inline-start:auto" onclick="openMcpAdd()">${t("add_mcp")}</button>
-        <button onclick="api('/api/open',{what:'mcp-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
-      <div class="sbody" id="mcpList"></div></section>
-    <section><div class="shead"><b>${t("hooks")}</b>${Q("hooks_tip")}
-        <button style="margin-inline-start:auto" onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("edit_arrow")}</button></div>
-      <div class="sbody" id="hooksList"></div></section>
-    <section><div class="shead"><b>${t("rules_sec")}</b>${Q("rules_sec_tip")}
-        <button style="margin-inline-start:auto" onclick="editRule(null)">${t("new_rule")}</button>
-        <button onclick="api('/api/open',{what:'rules-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button></div>
-      <div class="sbody" id="rulesList"></div></section>
-    <section><div class="shead"><b>${t("skills_sec")}</b>${Q("skills_sec_tip")}
-        <input type="text" id="skSearch" placeholder="${esc(t("search"))}" style="max-width:170px;margin-inline-start:auto" oninput="renderSkills()">
-        <button onclick="openSkillAdd()">${t("add_skill")}</button>
-        <span class="muted" id="skCount"></span></div>
-      <div class="sbody" style="max-height:420px;overflow-y:auto" id="skillsTable"></div></section>
-    <section><div class="shead"><b>${t("desktop")}</b>${Q("desktop_tip")}</div>
-      <div class="sbody" id="desktopSec"></div></section>
-    <section><div class="shead"><b>${t("dashcfg")}</b>${Q("dashcfg_tip")}</div>
-      <div class="sbody" id="dashcfg"></div></section>
+  <div class="${pg("sessions")}" id="page-sessions">
+    <div id="banners"></div>
+    <div class="panel" id="fallenPanel" hidden>
+      ${PH(t("fallen_t"),"fallen_tip",`<a class="btn sm" href="#/search?f=fallen">${ic("search")} ${t("search_more")}</a>`,"fallenSub")}
+      <div class="panel-b flush tscroll"><table class="stable srtable ftable">
+        <colgroup><col><col class="c-dir"><col class="c-when"><col class="c-fact"></colgroup>
+        <tbody id="fallenBody"></tbody></table></div>
+    </div>
+    <div class="ses-grid">
+      <div class="panel">
+        ${PH(t("ses_title"),"",`<span id="runBox"></span>
+            <button class="primary sm" id="restoreAllBtn" data-act="fix_all">${ic("undo")} ${t("restore_all")}</button>
+            <button class="sm" onclick="openAddSes()">${ic("plus")} ${t("add_ses")}</button>`,"sesSub")}
+        <div class="panel-b flush tscroll"><table class="stable">
+          <colgroup><col><col class="c-st"><col class="c-rc"><col class="c-last"><col class="c-act"></colgroup>
+          <thead><tr><th>${t("col_name")}</th><th>${t("col_state")}</th><th title="${esc(t("col_phone"))}">${t("col_phone")}</th>
+            <th>${t("col_last")}</th><th>${t("col_actions")}</th></tr></thead>
+          <tbody id="sesBody"></tbody></table></div>
+      </div>
+      <div class="panel">${PH(t("sys_t"))}<div class="panel-b flush" id="sysList"></div></div>
+    </div>
+    <div id="slotLogSes">
+      <div class="panel logs" id="logViewer">
+        <div class="panel-h">
+          <div class="ttl"><h2><span class="tx">${t("log_t")}</span></h2></div>
+          <div class="ltabs" id="logTabs">${LOG_SRCS.map(([v,k])=>`
+            <button class="${LG.src===v?"on":""}" data-src="${v}" onclick="setLogSrc('${v}')">${esc(I18N[L][k]||k)}</button>`).join("")}</div>
+          <div class="logs-tools">
+            <input type="text" id="logQ" dir="ltr" placeholder="${esc(t("log_filter"))}" value="${esc(LG.q)}" oninput="onLogQ(this.value)">
+            <button class="sm" id="logPause" onclick="toggleLogPause()"></button>
+            <button class="sm" onclick="copyLogs(this)" aria-label="${esc(t("copy"))}">${ic("copy")} <span class="lbl">${t("copy")}</span></button></div>
+        </div>
+        <div class="logbody" id="logBody"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="tab ${activeTab==="monitor"?"on":""}" id="tab-monitor">
-    <div class="grid g4" id="kpis"></div>
-    <section style="margin-top:1rem">
-      <div class="shead"><b>${t("days7")}</b>${Q("days7_tip")}
-        <div class="seg" style="margin-inline-start:auto" id="metricSeg">
+  <div class="${pg("search")}" id="page-search">
+    <div class="panel">
+      ${PH(t("pg_search"),"sr_tip","","srSub")}
+      <div class="sr-ctl">
+        <div class="sr-q">${ic("search")}
+          <input type="text" id="srQ" dir="auto" autocomplete="off" spellcheck="false" placeholder="${esc(t("sr_ph"))}"
+            aria-label="${esc(t("pg_search"))}" oninput="onSrInput(this.value)" onkeydown="onSrKey(event)">
+          <span class="spin" id="srSpin" hidden></span></div>
+        <div class="sr-opt">
+          <label class="sr-tgl"><span class="tg"><input type="checkbox" id="srContent" onchange="onSrContent(this.checked)"><span></span></span>${t("sr_content")}</label>${Q("sr_content_tip")}
+          <select id="srDays" onchange="onSrDays(this.value)" aria-label="${esc(t("sr_days"))}" title="${esc(t("sr_days"))}">${SR_DAYS.map(d=>`
+            <option value="${d}">${d===1?t("days_1"):t("days_n").replace("{n}",d)}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="sr-chips" id="srChips" role="group"></div>
+      <div class="panel-b flush tscroll"><table class="stable srtable" id="srTable">
+        <colgroup><col><col class="c-where"><col class="c-dir"><col class="c-when"><col class="c-sact"></colgroup>
+        <thead><tr><th>${t("col_session")}</th><th>${t("col_where")}</th><th>${t("col_folder")}</th>
+          <th>${t("col_last")}</th><th>${t("col_actions")}</th></tr></thead>
+        <tbody id="srBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="${pg("logs")}" id="page-logs"><div id="slotLogPage"></div></div>
+
+  <div class="${pg("new")}" id="page-new">
+    <div class="panel">${PH(t("generic"),"generic_tip")}
+      <div class="panel-b pad"><div class="presets" id="presetsGeneric"></div></div></div>
+    <div class="panel">${PH(t("mine"),"mine_tip",`<button class="sm" onclick="editPreset(null)">${t("new_preset")}</button>`)}
+      <div class="panel-b pad"><div class="presets" id="presetsCustom"></div></div></div>
+    <div class="cols wide">
+      <div class="panel ovf">${PH(t("custom"),"custom_tip",`<span class="tag t-est" id="customEst"></span>`)}
+        <div class="panel-b">
+          <div class="brow"><div class="bt">${t("comps")}</div>
+            <div class="optrow">
+              <div class="dd" id="ddMcp"><button class="ddbtn" onclick="toggleDd(event,'ddMcp')">${t("mcp_dd")} · <span id="cntMcp">0</span></button>
+                <div class="ddpanel" id="pnMcp"></div></div>${Q("mcp_tip")}
+              <div class="dd" id="ddRules"><button class="ddbtn" onclick="toggleDd(event,'ddRules')">${t("rules_dd")} · <span id="cntRules">0</span></button>
+                <div class="ddpanel" id="pnRules"></div></div>${Q("rules_tip")}
+              <label class="chkl"><input type="checkbox" id="cSkills" checked onchange="updCmd()"> ${t("skills")}</label>${Q("skills_tip")}
+              <label class="chkl"><input type="checkbox" id="cBare" onchange="updCmd()"> ${t("bare")}</label>${Q("bare_tip")}
+            </div>
+            <div class="exp">${t("comps_exp")}</div></div>
+          <div class="brow"><div class="bt">${t("env")}</div>
+            <div class="optrow">
+              <input type="text" id="cCwd" class="cwd" list="repoList" placeholder="${esc(t("cwd_ph"))}" dir="ltr" oninput="updCmd()">
+              <datalist id="repoList"></datalist>
+              <select id="cModel" onchange="updCmd()"></select></div>
+            <div class="exp">${t("env_exp")}</div></div>
+          <div class="brow"><div class="bt">${t("cmd")}</div>
+            <div class="cmdline"><span class="cmd" id="customCmd"></span></div>
+            <div class="btnrow">
+              <button class="primary" onclick="askTarget({custom:customSpec()})">${t("open_session")}</button>
+              <button onclick="copyCmd()">${t("copy")}</button>
+              <button onclick="saveAsPreset()">${t("save_preset")}</button></div></div>
+        </div>
+      </div>
+      <div class="panel">${PH(t("remote_sec"),"remote_sec_tip")}
+        <div class="panel-b">
+          <div class="row"><div><div class="name">${t("rc_row")}</div>
+            <div class="hint">${t("rc_hint")}</div></div>
+            <div class="end"><button class="primary" onclick="startRc(this)">${ic("phone")} ${t("rc_btn")}</button></div></div>
+          <div class="row"><div><div class="name">${t("ssh_row")}</div>
+            <div class="hint">${t("ssh_hint")}</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="${pg("manage")}" id="page-manage">
+    <div class="cols">
+      <div class="panel">${PH(t("acct"),"acct_tip")}<div class="panel-b" id="account"></div></div>
+      <div class="panel">${PH(t("files"),"files_tip",`<button class="sm" onclick="openFileAdd()">${t("add_file")}</button>`)}
+        <div class="panel-b" id="files"></div></div>
+    </div>
+    <div class="panel" id="outPanel" hidden>
+      ${PH(`<span id="outTitle"></span>`,"",`<button class="ib sm" onclick="$('outPanel').hidden=true" aria-label="${esc(t("close"))}" data-tip="${esc(t("close"))}">${ic("x")}</button>`)}
+      <div class="panel-b pad" id="doctorOut"></div></div>
+    <div class="cols">
+      <div class="panel">${PH(t("cc"),"cc_tip")}<div class="panel-b" id="settings"></div></div>
+      <div class="col">
+        <div class="panel">${PH(t("desktop"),"desktop_tip")}<div class="panel-b" id="desktopSec"></div></div>
+        <div class="panel">${PH(t("dashcfg"),"dashcfg_tip")}<div class="panel-b" id="dashcfg"></div></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="panel">${PH(t("mcp_sec"),"mcp_sec_tip",`<button class="sm" onclick="openMcpAdd()">${t("add_mcp")}</button>
+          <button class="sm" onclick="api('/api/open',{what:'mcp-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button>`)}
+        <div class="panel-b" id="mcpList"></div></div>
+      <div class="panel">${PH(t("rules_sec"),"rules_sec_tip",`<button class="sm" onclick="editRule(null)">${t("new_rule")}</button>
+          <button class="sm" onclick="api('/api/open',{what:'rules-dir'}).then(()=>toast(t('opened_finder')))">${t("folder")}</button>`)}
+        <div class="panel-b" id="rulesList"></div></div>
+    </div>
+    <div class="cols">
+      <div class="panel">${PH(t("hooks"),"hooks_tip",`<button class="sm" onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("edit_arrow")}</button>`)}
+        <div class="panel-b" id="hooksList"></div></div>
+      <div class="panel">${PH(t("skills_sec"),"skills_sec_tip",`<input type="text" id="skSearch" placeholder="${esc(t("search"))}" style="width:170px" oninput="renderSkills()">
+          <button class="sm" onclick="openSkillAdd()">${t("add_skill")}</button>`,"skCount")}
+        <div class="panel-b flush scroll" id="skillsTable"></div></div>
+    </div>
+  </div>
+
+  <div class="${pg("monitor")}" id="page-monitor">
+    <div class="kpis" id="kpis"></div>
+    <div class="cols wide">
+      <div class="panel">${PH(t("days7"),"days7_tip",`<div class="seg" id="metricSeg">
           <button class="${metric==="output"?"on":""}" data-m="output" onclick="setMetric(this)">Output</button>
           <button class="${metric==="input"?"on":""}" data-m="input" onclick="setMetric(this)">Input</button>
           <button class="${metric==="messages"?"on":""}" data-m="messages" onclick="setMetric(this)">${t("msgs")}</button>
-          <button class="${metric==="cache"?"on":""}" data-m="cache" onclick="setMetric(this)">Cache</button></div></div>
-      <div class="sbody chart" id="chart"></div>
-      <div class="sbody muted" style="padding-top:0;font-size:.73rem">${t("legend")}</div>
-    </section>
-    <section><div class="shead"><b>${t("matrix")}</b>${Q("matrix_tip")}</div>
-      <div class="sbody" style="overflow-x:auto"><table id="tblMatrix"></table></div></section>
-    <section><div class="shead"><b>${t("by_model")}</b>${Q("by_model_tip")}</div>
-      <div class="sbody"><table id="tblModels"></table></div></section>
-    <section><div class="shead"><b>${t("by_proj")}</b>${Q("by_proj_tip")}</div>
-      <div class="sbody"><table id="tblProjects"></table></div></section>
-    <p class="muted">${t("mon_src")}</p>
+          <button class="${metric==="cache"?"on":""}" data-m="cache" onclick="setMetric(this)">Cache</button></div>`)}
+        <div class="panel-b" id="chart"></div>
+        <div class="panel-f">${t("legend")}</div>
+      </div>
+      <div class="col">
+        <div class="panel">${PH(t("by_model"),"by_model_tip")}<div class="panel-b flush"><table class="dtable" id="tblModels"></table></div></div>
+        <div class="panel">${PH(t("by_proj"),"by_proj_tip")}<div class="panel-b flush"><table class="dtable" id="tblProjects"></table></div></div>
+      </div>
+    </div>
+    <div class="panel">${PH(t("matrix"),"matrix_tip")}<div class="panel-b flush tscroll"><table class="dtable" id="tblMatrix"></table></div></div>
+    <p class="note">${t("mon_src")}</p>
   </div>
 
-  <div class="tab ${activeTab==="guide"?"on":""}" id="tab-guide">
-    <section><div class="shead"><b>${t("guide_t")}</b></div>
-      <div class="sbody guide">${t("guide")}</div></section>
+  <div class="${pg("guide")}" id="page-guide">
+    <div class="panel">${PH(t("guide_t"))}<div class="panel-b pad"><div class="guide">${t("guide")}</div></div></div>
   </div>`;
 
   $("modals").innerHTML=`
@@ -742,9 +1258,705 @@ function buildStatic(){
     <div class="bp" id="remoteSteps"></div>
     <pre class="out" id="remoteCmds"></pre>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem">
-      <button class="primary" onclick="closeOv('ovRemote')">${t("open")}</button></div>
+      <button class="primary" onclick="closeOv('ovRemote')">${t("close")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovConfirm" dir="${dir}"><div class="modal">
+    <h3>${t("confirm_t")}</h3>
+    <p id="cfMsg"></p>
+    <div class="mfoot">
+      <button onclick="closeConfirm(false)">${t("cancel")}</button>
+      <button class="primary" id="cfYes" onclick="closeConfirm(true)">${t("yes")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovAddSes" dir="${dir}"><div class="modal">
+    <h3>${t("add_ses_t")}</h3>
+    <div class="bp">${t("add_ses_exp")}</div>
+    <div class="field"><label>${t("ses_name")}</label><input type="text" id="asName" dir="ltr" placeholder="ENG-1234"></div>
+    <div class="field"><label>${t("ses_uuid")}</label><input type="text" id="asUuid" dir="ltr" placeholder="0b5c2e1a-…"></div>
+    <div class="field"><label>${t("ses_dir")}</label><input type="text" id="asDir" dir="ltr" list="repoList" placeholder="${esc(t("cwd_ph"))}"></div>
+    <div class="mfoot">
+      <button onclick="closeOv('ovAddSes')">${t("cancel")}</button>
+      <button class="primary" onclick="saveAddSes(this)">${t("save")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovResume" dir="${dir}"><div class="modal">
+    <h3>${ic("play")} ${t("rs_t")}</h3>
+    <div class="rs-what" id="rsWhat"></div>
+    <div class="bp">${t("rs_exp")}</div>
+    <div class="field"><label for="rsName">${t("rs_name")}</label>
+      <input type="text" id="rsName" dir="ltr" maxlength="40" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')doResume($('rsGo'))">
+      <div class="exp">${t("rs_name_exp")}</div></div>
+    <div class="mfoot">
+      <button onclick="closeOv('ovResume')">${t("cancel")}</button>
+      <button class="primary" id="rsGo" onclick="doResume(this)">${ic("play")} ${t("resume_btn")}</button></div>
+  </div></div>
+  <div class="overlay" id="ovRc" dir="${dir}"><div class="modal">
+    <h3>${t("rc_link_t")}</h3>
+    <p class="muted mhead">${t("rc_link_exp")}</p>
+    <div class="centered" id="rcQr"></div>
+    <div class="linkrow"><a class="monobox" id="rcLink" target="_blank" rel="noopener"></a>
+      <button id="rcCopy">${ic("copy")} <span>${t("copy")}</span></button></div>
+    <div class="mfoot"><button class="primary" onclick="closeOv('ovRc')">${t("close")}</button></div>
   </div></div>`;
+  watchChart();
 }
+
+/* ═══════════ icons (inline, lucide-like) ═══════════ */
+const IC={
+ refresh:'<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/>',
+ lang:'<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+ power:'<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+ activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+ plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+ chart:'<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+ sliders:'<path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/>',
+ book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+ arrow:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+ wand:'<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>',
+ ok:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+ warn:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+ bad:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+ info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+ hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+ phone:'<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+ term:'<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+ more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+ ext:'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+ link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+ copy:'<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+ pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+ play:'<polygon points="6 3 20 12 6 21 6 3"/>',
+ undo:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+ wifi:'<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/>',
+ shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+ key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+ radio:'<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>',
+ heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
+ history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+ unplug:'<path d="m19 5 3-3"/><path d="m2 22 3-3"/><path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"/><path d="M7.5 13.5 10 11"/><path d="M10.5 16.5 13 14"/><path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"/>',
+ x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ help:'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+};
+const ic=(n,cls="")=>`<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||""}</svg>`;
+const LV_IC={ok:"ok",warn:"warn",bad:"bad",info:"info"};
+const CHK_IC={network:"wifi",vpn:"shield",auth:"key",daemon:"radio",watchdog:"heart",resume:"history"};
+
+/* ═══════════ routing (location.hash) ═══════════ */
+const PAGES=["home","sessions","search","new","logs","monitor","manage","guide"];
+const HOME_CARDS=[["sessions","activity"],["search","search"],["new","plus"],["logs","file"],["monitor","chart"],["manage","sliders"],["guide","book"]];
+const href=p=>p==="home"?"#/":"#/"+(p==="new"?"new-session":p);
+function pageFromHash(){
+  const h=(location.hash||"").replace(/^#\/?/,"").split(/[?/]/)[0];
+  const p=h==="new-session"?"new":h;
+  return PAGES.includes(p)?p:"home";
+}
+function route(keepScroll){
+  const prev=activeTab;activeTab=pageFromHash();
+  for(const p of PAGES){const el=$("page-"+p);if(el)el.classList.toggle("on",p===activeTab);}
+  const lv=$("logViewer"),slot=activeTab==="logs"?$("slotLogPage"):$("slotLogSes");
+  if(lv&&slot&&lv.parentNode!==slot)slot.appendChild(lv);
+  if(lv)lv.classList.toggle("full",activeTab==="logs");
+  hideMenu();renderTopbar();
+  document.title=activeTab==="home"?"Claude Control":`${t("pg_"+activeTab)} · Claude Control`;
+  if(prev!==activeTab&&!keepScroll)window.scrollTo(0,0);
+  if(activeTab==="monitor")loadMonitor();
+  if(activeTab==="search")initSearch();
+  if(activeTab==="sessions")renderFallen();
+  pollNow();
+}
+window.addEventListener("hashchange",()=>route());
+
+function machineLine(){
+  const cd=(S&&S.config&&S.config.code_dir)||"";
+  const base=cd.replace(/\/+$/,"").split("/").pop();
+  return `${t("machine")}: ${(S&&(S.machine||S.hostname))||"Mac"}${base?" · "+base:""}`;
+}
+function renderTopbar(){
+  const home=activeTab==="home";
+  $("tbStart").innerHTML=home
+    ?`<h1>Claude Control</h1><span class="sub">${esc(machineLine())}</span>`
+    :`<a class="back" href="#/" data-tip="${esc(t("back"))}" aria-label="${esc(t("back"))}">${ic("arrow","rtl-flip")}</a>
+      <nav class="crumb" aria-label="breadcrumb"><a href="#/">${t("home")}</a><span>/</span><b>${t("pg_"+activeTab)}</b></nav>`;
+  $("tbExtra").innerHTML=(activeTab==="sessions"||activeTab==="logs")
+    ?`<button onclick="checkNow(this)">${ic("refresh")} ${t("check_now")}</button>`:"";
+  $("tbSearch").hidden=activeTab==="search";   // the page has its own big search box
+  renderTopStatus();
+}
+function renderTopStatus(){
+  const el=$("tbStatus");if(!el)return;
+  const p=activeTab;
+  if((p==="home"||p==="sessions")&&rcErr){
+    el.className="tb-status err";el.innerHTML=`${ic("bad")} ${t("no_server")}`;return;}
+  el.className="tb-status";
+  if(p==="home")el.textContent=rcTs?t("upd_ago").replace("{n}",Math.max(0,Math.round((Date.now()-rcTs)/1000))):"";
+  else if(p==="sessions"||p==="logs")el.innerHTML=`<span class="dot ok live"></span>${t("live_5s")}`;
+  else el.textContent="";
+}
+
+/* ═══════════ small helpers ═══════════ */
+const lvOf=l=>["ok","warn","bad","info"].includes(l)?l:"info";
+const arr=x=>Array.isArray(x)?x:[];
+const issues=()=>arr(RC&&RC.issues);
+const checks=()=>arr(RC&&RC.checks);
+const sessions=()=>arr(RC&&RC.sessions);
+const autoIssues=()=>issues().filter(i=>i&&i.fix&&i.fix.kind==="auto");
+const manualIssues=()=>issues().filter(i=>i&&i.fix&&i.fix.kind==="manual");
+const safeUrl=u=>/^https?:\/\//i.test(String(u||""))?String(u):"#";
+const attachCmd=name=>`tmux attach -t rc-resume \\; select-window -t ${name}`;
+const findSes=name=>sessions().find(s=>s.name===name);
+function toMs(v){
+  if(v==null||v==="")return null;
+  if(typeof v==="number")return v<1e12?v*1000:v;
+  const s=String(v).trim();
+  if(/^\d+(\.\d+)?$/.test(s)){const n=+s;return n<1e12?n*1000:n;}
+  const hm=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(hm){const d=new Date();d.setHours(+hm[1],+hm[2],+(hm[3]||0),0);
+    let ms=d.getTime();if(ms>Date.now()+60000)ms-=864e5;return ms;}
+  const d=Date.parse(s);return isNaN(d)?null:d;
+}
+function rel(v){
+  const ms=toMs(v);if(ms==null)return v?String(v):"—";
+  const s=Math.max(0,Math.round((Date.now()-ms)/1000));
+  if(s<45)return t("rel_now");
+  const m=Math.round(s/60);if(m<60)return t("rel_m").replace("{n}",m);
+  const h=Math.round(m/60);if(h<24)return h===1?t("rel_h1"):t("rel_h").replace("{n}",h);
+  const d=Math.round(h/24);return d===1?t("rel_d1"):t("rel_d").replace("{n}",d);
+}
+function fmtTs(v){
+  if(typeof v==="string"&&/^\d{1,2}:\d{2}(:\d{2})?$/.test(v.trim()))return v.trim();
+  const ms=toMs(v);if(ms==null)return v?String(v):"";
+  return new Date(ms).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}
+// write innerHTML only when it changed: polling keeps hover, focus and text selection
+function setHtml(el,html){if(el&&el._h!==html){el.innerHTML=html;el._h=html;}}
+function errLine(retry){
+  return `<div class="errline">${ic("bad")} ${t("no_server")}
+    <button class="sm" onclick="${retry}">${ic("refresh")} ${t("retry")}</button></div>`;
+}
+function setBusy(btn,on){
+  if(!btn||btn.tagName!=="BUTTON")return;
+  if(on){btn.dataset.html=btn.innerHTML;btn.disabled=true;
+    btn.innerHTML=`<span class="spin"></span>`+btn.innerHTML.replace(/<svg[\s\S]*?<\/svg>/,"");}
+  else if(btn.dataset.html!=null){btn.innerHTML=btn.dataset.html;delete btn.dataset.html;btn.disabled=false;}
+}
+async function copyText(text,btn,toastKey){
+  let ok=false;
+  try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);ok=true;}}catch(e){}
+  if(!ok){
+    const ta=document.createElement("textarea");ta.value=text;ta.setAttribute("readonly","");
+    ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();
+    try{ok=document.execCommand("copy");}catch(e){}
+    ta.remove();
+  }
+  if(!ok){toast(t("failed"),"bad");return;}
+  const lbl=btn&&btn.querySelector("span:not(.spin)");
+  if(lbl){const old=lbl.textContent;lbl.textContent=t("copied_short");setTimeout(()=>{lbl.textContent=old;},1500);}
+  if(toastKey||!lbl)toast(t(toastKey||"copied"));
+}
+
+/* ═══════════ confirm + menu ═══════════ */
+let confirmResolve=null;
+function askConfirm(msg){
+  $("cfMsg").textContent=msg;$("ovConfirm").classList.add("on");setTimeout(()=>$("cfYes").focus(),30);
+  return new Promise(r=>{confirmResolve=r;});
+}
+function closeConfirm(v){$("ovConfirm").classList.remove("on");if(confirmResolve){confirmResolve(v);confirmResolve=null;}}
+function showMenu(btn){
+  const m=$("menuPop"),name=btn.dataset.menu;
+  if(m.classList.contains("on")&&m.dataset.for===name){hideMenu();return;}
+  m.dataset.for=name;
+  m.innerHTML=`<button data-act="restart_session" data-name="${esc(name)}" data-confirm="confirm_restart">${ic("refresh")} ${t("restart")}</button>
+    <button class="danger" data-act="drop" data-name="${esc(name)}" data-confirm="confirm_drop">${ic("bad")} ${t("drop")}</button>`;
+  m.classList.add("on");
+  const r=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  let x=L==="he"?r.left:r.right-w;x=Math.max(8,Math.min(x,innerWidth-w-8));
+  const y=r.bottom+6+h>innerHeight?r.top-h-6:r.bottom+6;
+  m.style.left=x+"px";m.style.top=y+"px";
+}
+function hideMenu(){const m=$("menuPop");if(m){m.classList.remove("on");m.dataset.for="";}}
+window.addEventListener("scroll",hideMenu,true);
+window.addEventListener("resize",hideMenu);
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape")return;
+  hideMenu();
+  if($("ovConfirm")?.classList.contains("on")){closeConfirm(false);return;}
+  document.querySelectorAll(".overlay.on").forEach(o=>closeOv(o.id));
+});
+document.addEventListener("click",e=>{
+  $("tip").style.display="none";
+  const c=e.target.closest("[data-copy]");
+  if(c){e.preventDefault();copyText(c.dataset.copy,c,c.dataset.toast);if(c.closest("#menuPop"))hideMenu();return;}
+  const rs=e.target.closest("[data-resume]");
+  if(rs){e.preventDefault();hideMenu();openResume(rs.dataset.resume);return;}
+  const sm=e.target.closest("[data-smenu]");
+  if(sm){e.preventDefault();showSrMenu(sm);return;}
+  const a=e.target.closest("[data-act]");
+  if(a){e.preventDefault();hideMenu();
+    const body={action:a.dataset.act};
+    if(a.dataset.name){body.name=a.dataset.name;const s=findSes(a.dataset.name);
+      if(s){if(s.uuid)body.uuid=s.uuid;if(s.dir)body.dir=s.dir;}}
+    rcAct(body,a,a.dataset.confirm);return;}
+  const m=e.target.closest("[data-menu]");
+  if(m){e.preventDefault();showMenu(m);return;}
+  if(!e.target.closest("#menuPop"))hideMenu();
+});
+
+/* ═══════════ remote-control status + actions ═══════════ */
+let RC=null,rcErr=false,rcTs=0,rcBusy=false,logStat=null;
+async function loadRc(){
+  if(rcBusy)return;rcBusy=true;
+  try{
+    const r=await fetch("/api/rc/status",{cache:"no-store"});
+    if(!r.ok)throw new Error(r.status);
+    const j=await r.json();if(!j||typeof j!=="object")throw new Error("bad json");
+    RC=j;rcErr=false;rcTs=Date.now();
+  }catch(e){rcErr=true;}
+  finally{rcBusy=false;}
+  renderRc();
+}
+function renderRc(){renderHero();renderCards();renderSessions();renderTopStatus();}
+async function rcAct(body,btn,confirmKey){
+  if(confirmKey&&!(await askConfirm(t(confirmKey).replace("{n}",body.name||""))))return;
+  setBusy(btn,true);
+  try{
+    const r=await fetch("/api/rc/action",{method:"POST",body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));
+    const ok=r.ok&&j.ok!==false&&!j.error;
+    const failed=arr(j.results).filter(x=>x&&x.ok===false).map(x=>x.step+(x.detail?": "+x.detail:""));
+    toast((j.message||j.error||(ok?t("done"):t("failed")))+(failed.length&&ok?" · "+failed[0]:""),ok?"ok":"bad");
+  }catch(e){toast(t("no_server"),"bad");}
+  finally{setBusy(btn,false);loadRc();setTimeout(loadRc,1500);}
+}
+function runningHtml(){
+  const ra=RC&&RC.running_action;if(!ra)return "";
+  const a=typeof ra==="string"?ra:(ra.action||"");
+  const lbl=I18N[L]["act_"+a]||a;
+  return `<span class="running"><span class="spin"></span>${t("running_action")}: ${esc(lbl)}${ra.step?" · "+esc(ra.step):""}</span>`;
+}
+function pillText(c){
+  const d=String(c.short||c.detail||"");
+  return esc(c.title||c.id||"")+(d&&d.length<=26?": "+esc(d):"");
+}
+function renderHero(){
+  const el=$("hero");if(!el)return;
+  if(!RC){
+    el.className="hero"+(rcErr?" bad":"");
+    setHtml(el,`<div class="hero-main">${rcErr?errLine("loadRc()")
+      :`<div class="hl"><span class="spin"></span>${t("checking")}</div>`}</div>`);
+    return;
+  }
+  const ov=RC.overall==="ok"||RC.overall==="warn"||RC.overall==="bad"?RC.overall:"warn";
+  const is=issues(),au=autoIssues(),mi=manualIssues();
+  let head,sub="";
+  if(!is.length){head=ov==="ok"?t("all_ok"):t("attention");sub=ov==="ok"?t("all_ok_sub"):"";}
+  else{head=(is.length===1?t("issues_1"):t("issues_n").replace("{n}",is.length))+" - "+(au.length?t("can_auto"):t("need_you"));
+    sub=is[0].detail||is[0].title||"";}
+  const pills=checks().map(c=>{const lv=lvOf(c.level);
+    return `<span class="pill ${lv}" data-tip="${esc(c.detail||c.title||"")}">${ic(LV_IC[lv])}${pillText(c)}</span>`;}).join("")
+    +(mi.length?`<span class="pill warn">${ic("hand")}${t("action_from_you")}: ${mi.length}</span>`:"");
+  el.className="hero "+ov;
+  setHtml(el,`
+    <div class="hero-main">
+      ${rcErr?errLine("loadRc()"):""}
+      <div class="hl"><span class="dot ${ov}"></span><span class="tx" title="${esc(head)}">${esc(head)}</span></div>
+      ${sub?`<div class="hsub" title="${esc(sub)}">${esc(sub)}</div>`:""}
+      ${runningHtml()}
+      ${pills?`<div class="pills">${pills}</div>`:""}
+    </div>
+    <div class="hero-acts">
+      ${au.length?`<button class="primary" data-act="fix_all" ${RC.running_action?"disabled":""}>${ic("wand")} ${t("fix_all_auto")}</button>`:""}
+      <a class="btn" href="#/sessions">${t("details")}</a>
+    </div>`);
+}
+function setStat(p,lv,txt,cardLv){
+  const el=$("stat-"+p);if(!el)return;
+  setHtml(el,txt?`<span class="dot ${lv}"></span><span class="trunc" title="${esc(txt)}">${esc(txt)}</span>`:"");
+  const card=$("card-"+p);if(card){card.classList.toggle("warn",cardLv==="warn");card.classList.toggle("bad",cardLv==="bad");}
+}
+function renderCards(){
+  if(!$("stat-sessions"))return;
+  if(RC){
+    const ss=sessions(),conn=ss.filter(s=>s.rc==="connected").length;
+    const need=ss.filter(s=>s.state==="stopped"||s.rc==="disconnected").length;
+    const warn=issues().length>0||need>0;
+    setStat("sessions",warn?"warn":"ok",t("st_ses").replace("{c}",conn).replace("{n}",ss.length)
+      +(need?" · "+t("st_fix").replace("{n}",need):""),warn?"warn":"");
+  }else setStat("sessions",rcErr?"bad":"info",rcErr?t("no_server"):t("loading"),rcErr?"bad":"");
+  if(FALLEN)setStat("search",FALLEN.length?"warn":"ok",FALLEN.length?t("st_fallen").replace("{n}",FALLEN.length):t("st_no_fallen"));
+  if(S)setStat("new","ok",`${arr(S.presets).length} ${t("profiles_c")}`);
+  if(logStat!=null)setStat("logs","info",`${logStat} ${t("events_hour")}`);
+  if(M){const lim=M.limits||{},wk=Math.floor(lim.seven_day?.utilization??0);
+    const today=arr(M.days)[arr(M.days).length-1]||{};
+    setStat("monitor","ok",`${t("week_l")} ${wk}% · ${t("today_l")} ${fmtTok(today.output)}`);}
+  if(S)setStat("manage",S.update_available?"warn":"ok",`Claude ${S.claude_version||"?"}`
+    +(S.update_available===true?" · "+t("update_avail"):S.update_available===false?" · "+t("up_to_date"):""));
+}
+function primaryAction(s){
+  const n=esc(s.name);
+  if(s.state==="stopped")
+    return `<button class="primary sm pri" data-act="resume_missing" data-name="${n}">${ic("play")} ${t("start")}</button>`;
+  if(s.rc==="disconnected")
+    return `<button class="primary sm pri" data-act="restart_session" data-name="${n}">${ic("unplug")} ${t("reconnect")}</button>`;
+  if(s.state==="waiting")
+    return `<button class="sm pri" data-copy="${esc(attachCmd(s.name))}" data-toast="attach_copied">${ic("ext")} ${t("open_approve")}</button>`;
+  if(s.rc==="connected"&&s.link)
+    return `<a class="btn sm pri" href="${esc(safeUrl(s.link))}" target="_blank" rel="noopener">${ic("phone")} ${t("open_phone")}</a>`;
+  // RC state unknown: the pane no longer shows an RC line (the TUI redrew). Offer a calm reconnect.
+  if(s.running&&s.rc!=="connected")
+    return `<button class="sm pri" data-act="restart_session" data-name="${n}" title="${esc(t("rc_unknown_tip"))}">${ic("unplug")} ${t("reconnect")}</button>`;
+  return "";
+}
+function renderSessions(){
+  const body=$("sesBody");if(!body)return;
+  setHtml($("banners"),(rcErr&&RC?`<div class="banner bad">${errLine("loadRc()")}</div>`:"")+manualIssues().map(i=>{
+    const f=i.fix||{},val=f.command||f.link||"";
+    const box=f.command?`<code class="monobox" title="${esc(val)}">${esc(val)}</code>`
+      :f.link?`<a class="monobox" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener" title="${esc(val)}">${esc(val)}</a>`:"";
+    return `<div class="banner"><div class="bn-txt"><b>${t("need_you_t")}: ${esc(i.title||f.label||"")}</b>
+        <div class="muted">${esc(i.detail||"")}</div></div>
+      ${val?`<div class="bn-act">${box}<button data-copy="${esc(val)}">${ic("copy")} <span>${t("copy")}</span></button></div>`:""}</div>`;
+  }).join(""));
+  const ss=sessions();
+  $("sesSub").textContent=RC?t("ses_sub").replace("{n}",ss.length).replace("{c}",ss.filter(s=>s.rc==="connected").length):"";
+  setHtml($("runBox"),runningHtml());
+  const rb=$("restoreAllBtn");if(rb&&!rb.dataset.html)rb.disabled=!!(RC&&RC.running_action);
+  if(!RC){
+    setHtml(body,`<tr><td colspan="5"><div class="tmsg">${rcErr?errLine("loadRc()"):`<span class="spin"></span>${t("loading")}`}</div></td></tr>`);
+  }else if(!ss.length){
+    setHtml(body,`<tr><td colspan="5"><div class="tmsg">${t("ses_empty")}</div></td></tr>`);
+  }else{
+    setHtml(body,ss.map(s=>{
+      const st=s.state==="waiting"?"warn":s.state==="stopped"?"muted":"ok";
+      const stDot=st==="muted"?"":st;
+      const rc=s.rc==="connected"?["ok","phone"]:s.rc==="disconnected"?["bad","unplug"]:["muted","help"];
+      const hot=s.rc==="disconnected"||s.state==="stopped";
+      const stTx=t("st_"+(["active","waiting","stopped"].includes(s.state)?s.state:"active"));
+      const rcTx=t("rc_"+(["connected","disconnected"].includes(s.rc)?s.rc:"unknown"));
+      return `<tr class="${hot?"hot":""}">
+        <td class="nm" title="${esc(s.name||"")}">${esc(s.name||"?")}</td>
+        <td><span class="st ${st}"><span class="dot ${stDot}"></span><span class="tx" title="${esc(stTx)}">${esc(stTx)}</span></span></td>
+        <td><span class="rcs ${rc[0]}">${ic(rc[1])}<span class="tx">${esc(rcTx)}</span></span></td>
+        <td class="c-muted" title="${esc(String(s.last_activity??""))}">${esc(rel(s.last_activity))}</td>
+        <td><div class="acts-cell">${primaryAction(s)}
+          <button class="ib sm" data-copy="${esc(attachCmd(s.name))}" data-toast="attach_copied" data-tip="${esc(t("copy_attach"))}" aria-label="${esc(t("copy_attach"))}">${ic("term")}</button>
+          <button class="ib sm" data-menu="${esc(s.name)}" data-tip="${esc(t("more"))}" aria-label="${esc(t("more"))}">${ic("more")}</button></div></td></tr>`;
+    }).join(""));
+  }
+  const sys=$("sysList");
+  if(!RC){setHtml(sys,rcErr?`<div class="chk bad">${errLine("loadRc()")}</div>`:`<div class="tmsg"><span class="spin"></span>${t("loading")}</div>`);return;}
+  setHtml(sys,checks().map(c=>{const lv=lvOf(c.level),ttl=c.title||c.id||"",act=c.action?actBtn(c.action):"";
+    return `<div class="chk ${lv}">${ic(CHK_IC[c.id]||LV_IC[lv])}<b title="${esc(ttl)}">${esc(ttl)}</b>
+      <span class="lv ${lv}">${t("lv_"+lv)}</span>
+      ${c.detail?`<div class="d" title="${esc(c.detail)}">${esc(c.detail)}</div>`:""}
+      ${act?`<div class="a">${act}</div>`:""}</div>`;}).join("")
+    ||`<div class="tmsg">${t("none")}</div>`);
+}
+function actBtn(a){
+  if(!a)return "";
+  if(typeof a==="string")a={kind:"auto",action:a};
+  const label=a.label||I18N[L]["act_"+a.action]||a.action||"";
+  if(a.kind==="manual"){
+    if(a.command)return `<button class="sm" data-copy="${esc(a.command)}">${ic("copy")} <span>${esc(label)}</span></button>`;
+    if(a.link)return `<a class="btn sm" href="${esc(safeUrl(a.link))}" target="_blank" rel="noopener">${ic("ext")} ${esc(label)}</a>`;
+    return "";
+  }
+  if(!a.action)return "";
+  return `<button class="sm" data-act="${esc(a.action)}">${ic("wand")} ${esc(label)}</button>`;
+}
+function openAddSes(){["asName","asUuid","asDir"].forEach(id=>$(id).value="");$("ovAddSes").classList.add("on");setTimeout(()=>$("asName").focus(),30);}
+async function saveAddSes(btn){
+  const name=$("asName").value.trim();
+  if(!name){toast(t("name_req"),"bad");$("asName").focus();return;}
+  await rcAct({action:"keep",name,uuid:$("asUuid").value.trim(),dir:$("asDir").value.trim()},btn);
+  closeOv("ovAddSes");
+}
+async function checkNow(btn){
+  setBusy(btn,true);
+  try{await Promise.all([loadRc(),activeTab==="logs"||activeTab==="sessions"?loadLogs(true):null]);}
+  finally{setBusy(btn,false);}
+}
+
+/* ═══════════ "work from your phone": the existing remote-control daemon ═══════════ */
+async function startRc(btn){
+  setBusy(btn,true);
+  try{
+    const j=await api("/api/remote-control",{});
+    const link=j.link||j.env_link||j.url||(j.daemon&&j.daemon.env_link)||(RC&&RC.daemon&&RC.daemon.env_link)||"";
+    if(!link){toast(j.message||t("rc_no_link"));return;}
+    const a=$("rcLink");a.textContent=link;a.href=safeUrl(link);$("rcCopy").dataset.copy=link;
+    $("rcQr").innerHTML="";
+    fetch("/api/qr?text="+encodeURIComponent(link)).then(r=>r.ok?r.text():"").then(svg=>{
+      $("rcQr").innerHTML=svg&&svg.includes("<svg")?`<div class="qrwrap">${svg}</div>`:`<div class="muted">${esc(t("qr_missing"))}</div>`;
+    }).catch(()=>{});
+    $("ovRc").classList.add("on");
+  }catch(e){if(!(typeof e==="string"))toast(t("no_server"),"bad");}
+  finally{setBusy(btn,false);}
+}
+
+/* ═══════════ session search (#/search) + "fell recently" (#/sessions) ═══════════ */
+const SR_DAYS=[1,3,7,14,30,90];
+const SR_FILTERS=[["all",()=>true],["running",r=>r.running],["fallen",r=>r.fallen],["list",r=>r.in_list],["stopped",r=>!r.running]];
+const SR={q:"",content:false,days:14,filter:"all",res:null,scanned:0,err:false,busy:false,busyContent:false,seq:0,ran:""};
+const SRMAP={};                 // uuid -> last seen search record (menu, resume modal)
+let srTimer=null,FALLEN=null,fallenBusy=false;
+const FALLEN_MAX=4;            // keep the panel compact: the rest is one click away in #/search
+let resumeDry=false;            // dev switch: true sends dry:true (nothing starts). Set it from the console to test.
+const srKey=()=>JSON.stringify([SR.q,SR.content&&!!SR.q,SR.days]);
+function hashParams(){const h=location.hash||"",i=h.indexOf("?");return new URLSearchParams(i<0?"":h.slice(i+1));}
+function searchHref(q,f){const p=new URLSearchParams();if(q)p.set("q",q);if(f&&f!=="all")p.set("f",f);
+  const s=p.toString();return "#/search"+(s?"?"+s:"");}
+function tbSearchKey(e){
+  if(e.key!=="Enter"||e.isComposing)return;
+  const v=e.target.value.trim(),h=searchHref(v);
+  e.target.value="";e.target.blur();
+  if(location.hash===h)route();else location.hash=h;
+}
+function initSearch(){
+  const p=hashParams();
+  SR.q=(p.get("q")||"").trim();
+  const f=p.get("f");if(f&&SR_FILTERS.some(x=>x[0]===f))SR.filter=f;else if(!f&&p.has("q"))SR.filter="all";
+  const i=$("srQ");if(i)i.value=SR.q;
+  if($("srContent"))$("srContent").checked=SR.content;
+  if($("srDays"))$("srDays").value=String(SR.days);
+  if(SR.res&&SR.ran===srKey())renderSearch();else runSearch();
+  setTimeout(()=>{const x=$("srQ");if(x&&activeTab==="search"){x.focus();x.setSelectionRange(x.value.length,x.value.length);}},30);
+}
+function setSrHash(){const h=searchHref(SR.q,SR.filter);if(location.hash!==h)history.replaceState(null,"",h);}
+async function runSearch(){
+  clearTimeout(srTimer);
+  const seq=++SR.seq,key=srKey(),content=SR.content&&!!SR.q;
+  SR.busy=true;SR.busyContent=content;renderSearch();
+  try{
+    const r=await fetch(`/api/sessions/search?q=${encodeURIComponent(SR.q)}&days=${SR.days}&limit=300${content?"&content=1":""}`,{cache:"no-store"});
+    const j=await r.json();
+    if(seq!==SR.seq)return;                     // a newer search is running
+    if(!r.ok||j.error)throw new Error(j.error||r.status);
+    SR.res=arr(j.results);SR.scanned=j.scanned||0;SR.err=false;SR.ran=key;
+    SR.res.forEach(x=>{if(x&&x.uuid)SRMAP[x.uuid]=x;});
+  }catch(e){if(seq!==SR.seq)return;SR.err=true;}
+  SR.busy=false;renderSearch();
+}
+function onSrInput(v){
+  SR.q=v.trim();setSrHash();clearTimeout(srTimer);
+  // content search is slow: with the switch on it waits for Enter (an empty box still lists recent sessions)
+  if(SR.content&&SR.q)renderSearch();else srTimer=setTimeout(runSearch,300);
+}
+function onSrKey(e){if(e.key==="Enter"&&!e.isComposing){e.preventDefault();SR.q=e.target.value.trim();setSrHash();runSearch();}}
+function onSrContent(on){SR.content=on;if(SR.q)runSearch();else renderSearch();}
+function onSrDays(v){SR.days=+v||14;runSearch();}
+function setSrFilter(f){SR.filter=f;setSrHash();renderSearch();}
+function srContentOn(){SR.content=true;const c=$("srContent");if(c)c.checked=true;runSearch();}
+
+const shq=s=>/^[A-Za-z0-9_\/.~@%+=:,-]+$/.test(s)?s:"'"+String(s).replace(/'/g,"'\\''")+"'";
+function shortDir(d){
+  d=String(d||"").replace(/^\/Users\/[^/]+(?=\/|$)/,"~");
+  const p=d.split("/");return p.length>4?"…/"+p.slice(-2).join("/"):d;
+}
+function whereInfo(r){
+  if(!r.running)return {kind:"none"};
+  const w=String(r.where||"");
+  if(w==="Claude Desktop")return {kind:"desktop",label:"Claude Desktop"};
+  const m=w.match(/^([^:]+):(.+)$/);
+  if(m)return {kind:"tmux",ses:m[1],win:m[2],label:`tmux: ${m[1]} / ${m[2]}`,
+    cmd:`tmux attach -t ${shq(m[1])} \\; select-window -t ${shq(m[2])}`};
+  return {kind:"unknown",label:w||t("running_unknown")};
+}
+const resumeCmd=r=>`cd ${shq(r.dir||"~")} && claude --resume ${r.uuid}`;
+function fullTs(v){const ms=toMs(v);return ms==null?"":new Date(ms).toLocaleString(L==="he"?"he-IL":"en-GB",
+  {day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}
+function titleCell(r,showMatch,one){
+  const name=r.title||r.first||t("untitled"),second=!one&&r.title&&r.first?r.first:"";
+  return `<div class="t2"><div class="l1"><span class="tx" dir="auto" title="${esc(name)}">${esc(name)}</span>
+    ${showMatch&&r.match==="content"?`<span class="lv info">${t("in_content")}</span>`:""}</div>
+    ${second?`<div class="l2"><span class="tx" dir="auto" title="${esc(second)}">${esc(second)}</span></div>`:""}</div>`;
+}
+const dirCell=r=>`<td class="code c-muted" title="${esc(r.dir||"")}">${esc(shortDir(r.dir))}</td>`;
+const whenCell=r=>`<td class="c-muted" title="${esc(fullTs(r.last_activity))}">${esc(rel(r.last_activity))}</td>`;
+const resumeBtn=r=>`<button class="primary sm" data-resume="${esc(r.uuid)}">${ic("play")} ${t("resume_btn")}</button>`;
+function srRow(r){
+  const wi=whereInfo(r);
+  let w1;
+  if(wi.kind==="none")w1=r.fallen
+    ?`<span class="lv warn">${t("fallen_pill")}</span><span class="tx c-muted">${t("not_running")}</span>`
+    :`<span class="dot"></span><span class="tx c-muted">${t("not_running")}</span>`;
+  else w1=`<span class="dot ok live"></span><span class="tx" dir="ltr" title="${esc(wi.label)}">${esc(wi.label)}</span>`;
+  const w2=r.in_list?`<div class="l2"><span class="tx" title="${esc(t("in_list_l").replace("{n}",r.list_name||""))}">${esc(t("in_list_l").replace("{n}",r.list_name||""))}</span></div>`:"";
+  let act;
+  if(wi.kind==="tmux")act=`<button class="sm" data-copy="${esc(wi.cmd)}" data-toast="attach_copied" data-tip="${esc(wi.cmd)}">${ic("term")} <span>${t("copy_attach_btn")}</span></button>`;
+  else if(wi.kind==="desktop")act=`<span class="c-muted trunc">${t("in_app")}</span>`;
+  else if(wi.kind==="unknown")act=`<span class="c-muted trunc">${t("running_l")}</span>`;
+  else act=resumeBtn(r);
+  return `<tr class="${r.fallen?"hot":""}"><td>${titleCell(r,true)}</td>
+    <td><div class="t2"><div class="l1">${w1}</div>${w2}</div></td>
+    ${dirCell(r)}${whenCell(r)}
+    <td><div class="acts-cell">${act}
+      <button class="ib sm" data-smenu="${esc(r.uuid)}" data-tip="${esc(t("more"))}" aria-label="${esc(t("more"))}">${ic("more")}</button></div></td></tr>`;
+}
+const srMsg=(html,cols=5)=>`<tr><td colspan="${cols}"><div class="tmsg">${html}</div></td></tr>`;
+function renderSearch(){
+  const body=$("srBody");if(!body)return;
+  const res=SR.res,ranQ=res?JSON.parse(SR.ran||'[""]')[0]:"",ranContent=res?JSON.parse(SR.ran||"[0,0]")[1]:false;
+  setHtml($("srChips"),SR_FILTERS.map(([k,f])=>`<button class="fchip${SR.filter===k?" on":""}" aria-pressed="${SR.filter===k}"
+    onclick="setSrFilter('${k}')">${t("f_"+k)} <b>${res?res.filter(f).length:"-"}</b></button>`).join(""));
+  $("srSpin").hidden=!SR.busy;
+  const dl=SR.days===1?t("days_1"):t("days_n").replace("{n}",SR.days);
+  let sub="";
+  if(SR.busy)sub=SR.busyContent?t("sr_searching_content"):t("sr_searching");
+  else if(SR.content&&SR.q&&SR.ran!==srKey())sub=t("sr_enter_hint");
+  else if(res&&!SR.err)sub=(ranQ?t(res.length===1?"sr_found_1":"sr_found").replace("{n}",res.length).replace("{s}",SR.scanned)
+    :t("sr_recent").replace("{n}",res.length))+" · "+dl;
+  const se=$("srSub");se.textContent=sub;se.title=sub;
+  $("srTable").classList.toggle("busy",SR.busy&&!!res);
+  const err=SR.err?srMsg(errLine("runSearch()")):"";
+  if(!res){setHtml(body,err||srMsg(`<span class="spin"></span>${t("loading")}`));return;}
+  const f=(SR_FILTERS.find(x=>x[0]===SR.filter)||SR_FILTERS[0])[1],rows=res.filter(f);
+  let html;
+  if(!res.length)html=!ranQ?srMsg(t("sr_empty"))
+    :ranContent?srMsg(t("sr_none_content"))
+    :srMsg(`${ic("search")} ${t("sr_none")} <button class="sm" onclick="srContentOn()">${ic("search")} ${t("sr_turn_on")}</button>`);
+  else if(!rows.length)html=srMsg(t("sr_filter_none"));
+  else html=rows.map(srRow).join("");
+  setHtml(body,err+html);
+}
+function showSrMenu(btn){
+  const m=$("menuPop"),u=btn.dataset.smenu,r=SRMAP[u];
+  if(m.classList.contains("on")&&m.dataset.for==="sr:"+u){hideMenu();return;}
+  m.dataset.for="sr:"+u;
+  m.innerHTML=`<button data-copy="${esc(u)}" data-toast="copied">${ic("copy")} <span>${t("copy_id")}</span></button>`
+    +(r?`<button data-copy="${esc(resumeCmd(r))}" data-toast="copied">${ic("term")} <span>${t("copy_resume")}</span></button>`:"");
+  m.classList.add("on");
+  const b=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  let x=L==="he"?b.left:b.right-w;x=Math.max(8,Math.min(x,innerWidth-w-8));
+  m.style.left=x+"px";m.style.top=(b.bottom+6+h>innerHeight?b.top-h-6:b.bottom+6)+"px";
+}
+
+/* resume: confirm modal -> POST /api/sessions/resume */
+let resumeUuid=null;
+const sanitizeName=s=>String(s||"").replace(/[^A-Za-z0-9._-]+/g,"-").replace(/^[-._]+/,"").slice(0,40).replace(/[-._]+$/,"");
+function openResume(u){
+  const r=SRMAP[u];if(!r)return;
+  resumeUuid=u;
+  const name=r.title||r.first||t("untitled");
+  $("rsWhat").innerHTML=`<b dir="auto" title="${esc(name)}">${esc(name)}</b>
+    <div class="mono" title="${esc(r.dir||"")}">${esc(shortDir(r.dir))}</div><div class="mono">${esc(u)}</div>`;
+  $("rsName").value=sanitizeName(r.title)||"session-"+u.slice(0,8);
+  $("ovResume").classList.add("on");
+  setTimeout(()=>{const i=$("rsName");i.focus();i.select();},30);
+}
+async function doResume(btn){
+  const name=$("rsName").value.trim();
+  if(!/^[A-Za-z0-9._-]{1,40}$/.test(name)){toast(t("rs_bad_name"),"bad");$("rsName").focus();return;}
+  if(!resumeUuid||btn.disabled)return;
+  setBusy(btn,true);
+  let ok=false;
+  try{
+    const body={uuid:resumeUuid,name};if(resumeDry)body.dry=true;
+    const r=await fetch("/api/sessions/resume",{method:"POST",body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));
+    ok=r.ok&&j.ok!==false&&!j.error;
+    const failed=arr(j.results).filter(x=>x&&x.ok===false).map(x=>x.step+(x.detail?": "+x.detail:""));
+    toast((j.dry?"[dry] ":"")+(j.message||j.error||(ok?t("done"):t("failed")))+(failed.length?" · "+failed[0]:""),ok?"ok":"bad");
+  }catch(e){toast(t("no_server"),"bad");}
+  finally{
+    setBusy(btn,false);
+    if(ok){closeOv("ovResume");if(activeTab==="search")runSearch();loadFallen();loadRc();setTimeout(loadRc,1500);}
+  }
+}
+
+/* "fell recently" panel on #/sessions + the home card line */
+async function loadFallen(){
+  if(fallenBusy)return;fallenBusy=true;
+  try{
+    const r=await fetch("/api/sessions/search?q=&days=1&limit=300",{cache:"no-store"});
+    const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
+    FALLEN=arr(j.results).filter(x=>x&&x.fallen);
+    FALLEN.forEach(x=>{SRMAP[x.uuid]=x;});
+  }catch(e){/* keep the last list: this panel is a hint, the sessions table shows server errors */}
+  finally{fallenBusy=false;}
+  renderFallen();renderCards();
+}
+function renderFallen(){
+  const p=$("fallenPanel");if(!p)return;
+  const list=arr(FALLEN);p.hidden=!list.length;if(!list.length)return;
+  $("fallenSub").textContent=t("fallen_sub").replace("{n}",list.length)+(list.length>FALLEN_MAX?" · "+t("fallen_more").replace("{n}",FALLEN_MAX):"");
+  setHtml($("fallenBody"),list.slice(0,FALLEN_MAX).map(r=>`<tr><td>${titleCell(r,false,true)}</td>${dirCell(r)}${whenCell(r)}
+    <td><div class="acts-cell">${resumeBtn(r)}</div></td></tr>`).join(""));
+}
+
+/* ═══════════ log viewer (sessions page + #/logs) ═══════════ */
+const LOG_SRCS=[["all","log_all"],["watchdog","Watchdog"],["resume","log_resume"],["daemon","Daemon"],["forti","FortiClient"]];
+const LG={src:"all",q:"",paused:false,lines:null,err:false,busy:false,stick:true,sig:""};
+let logQTimer=null;
+async function loadLogs(force){
+  if((LG.paused&&!force)||LG.busy)return;
+  LG.busy=true;
+  const src=LG.src,q=LG.q;
+  try{
+    const r=await fetch(`/api/logs?src=${encodeURIComponent(src)}&n=200&q=${encodeURIComponent(q)}`,{cache:"no-store"});
+    if(!r.ok)throw new Error(r.status);
+    const j=await r.json();
+    if(src!==LG.src||q!==LG.q)return;          // a newer request is coming
+    LG.lines=arr(j&&j.lines);LG.err=false;
+    if(src==="all"&&!q)logStat=countHour(LG.lines);
+  }catch(e){LG.err=true;}
+  finally{LG.busy=false;}
+  renderLogs();renderCards();
+}
+function countHour(lines){const now=Date.now();return lines.filter(l=>{const ms=toMs(l.ts);return ms!=null&&now-ms<=36e5;}).length;}
+async function loadLogStat(){
+  try{const r=await fetch("/api/logs?src=all&n=200&q=",{cache:"no-store"});if(!r.ok)return;
+    const j=await r.json();logStat=countHour(arr(j&&j.lines));renderCards();}catch(e){}
+}
+function renderLogs(force){
+  const b=$("logBody");if(!b)return;
+  const pb=$("logPause");
+  if(pb){pb.innerHTML=LG.paused?`${ic("play")} <span class="lbl">${t("resume")}</span>`:`${ic("pause")} <span class="lbl">${t("pause")}</span>`;
+    pb.setAttribute("aria-label",LG.paused?t("resume"):t("pause"));}
+  document.querySelectorAll("#logTabs button").forEach(x=>x.classList.toggle("on",x.dataset.src===LG.src));
+  let html;
+  if(LG.lines==null)html=LG.err?errLine("loadLogs(true)"):`<div class="tmsg"><span class="spin"></span>${t("loading")}</div>`;
+  else{
+    html=(LG.err?errLine("loadLogs(true)"):"")+(LG.lines.length?LG.lines.map(l=>{
+      const lv=lvOf(l.level);
+      return `<div class="ll ${lv}"><span class="ts">${esc(fmtTs(l.ts))}</span>${LG.src==="all"&&l.src?`<span class="src">[${esc(l.src)}]</span>`:""}<span class="m">${esc(l.msg??"")}</span></div>`;
+    }).join(""):`<div class="tmsg">${t("log_empty")}</div>`);
+  }
+  if(html===LG.sig&&!force)return;           // nothing new: keep the user's selection and scroll
+  const atBottom=b.scrollHeight-b.scrollTop-b.clientHeight<40;
+  b.innerHTML=html;LG.sig=html;
+  if(atBottom||LG.stick){b.scrollTop=b.scrollHeight;LG.stick=false;}
+}
+function setLogSrc(v){if(LG.src===v)return;LG.src=v;LG.lines=null;LG.stick=true;renderLogs();loadLogs(true);}
+function onLogQ(v){clearTimeout(logQTimer);logQTimer=setTimeout(()=>{LG.q=v.trim();LG.stick=true;loadLogs(true);},350);}
+function toggleLogPause(){LG.paused=!LG.paused;renderLogs(true);if(!LG.paused)loadLogs(true);}
+function copyLogs(btn){
+  const txt=arr(LG.lines).map(l=>`${fmtTs(l.ts)} ${LG.src==="all"&&l.src?"["+l.src+"] ":""}${l.msg??""}`).join("\n");
+  copyText(txt,btn);
+}
+
+/* ═══════════ polling ═══════════ */
+let pollN=0;
+function pollNow(){
+  const p=activeTab;
+  if(p==="home"||p==="sessions")loadRc();
+  if(p==="sessions"||p==="logs")loadLogs();
+  if(p==="home"){if(logStat==null)loadLogStat();if(!M)loadMonitorQuiet();}
+  if(p==="home"||p==="sessions")loadFallen();
+}
+async function loadMonitorQuiet(){
+  try{const r=await fetch("/api/monitor");if(!r.ok)return;M=await r.json();renderCards();}catch(e){}
+}
+setInterval(()=>{
+  if(document.hidden)return;
+  pollN++;
+  const p=activeTab;
+  if(p==="home"||p==="sessions")loadRc();
+  if(p==="sessions"||p==="logs")loadLogs();
+  if(p==="home"&&pollN%6===0)loadLogStat();
+  if((p==="home"||p==="sessions")&&pollN%6===0)loadFallen();
+},5000);
+setInterval(()=>{if(activeTab==="home")renderTopStatus();},1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pollNow();});
 
 /* ═══════════ renders ═══════════ */
 function renderAll(){
@@ -764,6 +1976,7 @@ function renderAll(){
   updCmd();
   renderAccount();renderSettings();renderFiles();renderMcp();renderHooks();
   renderRules();renderSkills();renderDesktop();renderDashCfg();
+  renderCards();if(activeTab==="home")renderTopbar();
 }
 function presetCard(p){
   const name=p.custom?p.name:(I18N[L]["bp_"+p.id+"_n"]||p.name);
@@ -773,24 +1986,24 @@ function presetCard(p){
     p.bare?"bare":null,p.skills&&!p.bare?"skills":null,p.model||null,
     ...(p.rules||[]).map(r=>r.replace(/\.mdc?$/,""))].filter(Boolean);
   return `<div class="preset k-${p.kind==="custom"?"custom":"generic"}">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:.4rem">
-      <b>${esc(name)}</b>
-      <span style="display:flex;gap:.15rem;align-items:center">
+    <div class="pc-head">
+      <b title="${esc(name)}">${esc(name)}</b>
+      <span class="pc-tools">
         <span class="tag t-est q" data-tip="${esc(t("est_tip"))}">~${p.est}k</span>
         ${p.custom?`<button class="ghost" title="${t("edit")}" onclick="editPreset('${p.id}')">✎</button>
                     <button class="ghost" title="${t("del")}" onclick="delPreset('${p.id}')">✕</button>`
                   :`<button class="ghost" title="${t("dup")}" onclick="dupPreset('${p.id}')">⧉</button>`}
       </span></div>
-    <div class="d">${esc(desc)}${p.cwd?` · <span class="cmd">${esc(p.cwd)}</span>`:""}</div>
-    <div class="chips">${chips.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
+    <div class="d" title="${esc(desc+(p.cwd?" · "+p.cwd:""))}">${esc(desc)}${p.cwd?` · <span class="cmd">${esc(p.cwd)}</span>`:""}</div>
+    <div class="chips">${chips.map(c=>`<span class="chip" title="${esc(c)}">${esc(c)}</span>`).join("")}</div>
     <div class="a">
-      <button class="${p.kind==="custom"?"primary":"bluebtn"}" onclick="askTarget({preset:'${p.id}'})">${t("open_session")}</button>
-      <button onclick="copyPreset('${p.id}')">${t("copy_cmd")}</button></div></div>`;
+      <button class="sm ${p.kind==="custom"?"primary":"bluebtn"}" onclick="askTarget({preset:'${p.id}'})">${t("open_session")}</button>
+      <button class="sm" onclick="copyPreset('${p.id}')">${t("copy_cmd")}</button></div></div>`;
 }
 function renderPresets(){
   $("presetsGeneric").innerHTML=S.presets.filter(p=>!p.custom).map(presetCard).join("");
   $("presetsCustom").innerHTML=S.presets.filter(p=>p.custom).map(presetCard).join("")
-    ||`<div class="muted" style="padding:.4rem 0">${t("empty_mine")}</div>`;
+    ||`<div class="empty" style="grid-column:1/-1">${t("empty_mine")}</div>`;
 }
 function ddPanel(el,name,items,selected){
   el.innerHTML=items.length?items.map(i=>`
@@ -896,91 +2109,91 @@ function doLaunch(){
 }
 
 /* manage renders */
+// one settings row: title (+tip/tag), optional one-line hint, controls on the end side
+const mrow=(name,hint,end,hintCls="")=>`<div class="row"><div><div class="name">${name}</div>
+    ${hint?`<div class="hint ${hintCls}">${hint}</div>`:""}</div>${end?`<div class="end">${end}</div>`:""}</div>`;
 function renderAccount(){
-  const a=S.account;
-  $("account").innerHTML=`
-    <div class="row"><div><div class="name">${t("acct_row")}</div>
-      <div class="hint">${a.email?esc(a.email)+(a.org?" · "+esc(a.org):""):t("acct_none")}</div></div>
-      <button onclick="api('/api/login',{}).then(()=>toast(t('login_toast')))">${t("login")}</button></div>
-    <div class="row"><div><div class="name">${t("ver_row")} ${Q("ver_tip")}
-        <span class="tag t-est">${esc(S.claude_version||"?")}</span></div></div>
-      <button onclick="runUpdate(this)">${t("update_btn")}</button></div>
-    <div class="row"><div><div class="name">${t("diag")} ${Q("diag_tip")}</div>
-      <div class="hint">${t("diag_h")}</div></div>
-      <button onclick="runDoctor(this)">${t("run_diag")}</button></div>
-    <div id="doctorOut"></div>`;
+  const a=S.account||{};
+  const who=a.email?esc(a.email)+(a.org?" · "+esc(a.org):""):t("acct_none");
+  $("account").innerHTML=
+    mrow(t("acct_row"),`<span title="${esc(a.email||"")}">${who}</span>`,
+      `<button class="sm" onclick="api('/api/login',{}).then(()=>toast(t('login_toast')))">${t("login")}</button>`,"trunc")
+   +mrow(`${t("ver_row")} ${Q("ver_tip")}<span class="tag t-est">${esc(S.claude_version||"?")}</span>`,"",
+      `<button class="sm" onclick="runUpdate(this)">${t("update_btn")}</button>`)
+   +mrow(`${t("diag")} ${Q("diag_tip")}`,t("diag_h"),
+      `<button class="sm" onclick="runDoctor(this)">${t("run_diag")}</button>`,"trunc");
 }
+function showOut(title,html){
+  $("outTitle").textContent=title;$("doctorOut").innerHTML=html;$("outPanel").hidden=false;
+}
+const outBlock=(cmd,out)=>`<div class="muted" style="margin-top:8px;direction:ltr;text-align:left">$ ${esc(cmd)}</div><pre class="out">${esc(out||"")}</pre>`;
 async function runUpdate(btn){
-  btn.disabled=true;btn.textContent=t("updating");
+  setBusy(btn,true);
+  showOut("claude update",`<div class="tmsg" style="padding:0"><span class="spin"></span>${t("updating")}</div>`);
   try{
     const j=await api("/api/update",{});
-    $("doctorOut").innerHTML=`<div class="muted" style="margin-top:.5rem;direction:ltr;text-align:left">$ claude update</div><pre class="out">${esc(j.output||"")}</pre>`;
-  }finally{btn.disabled=false;btn.textContent=t("update_btn");}
+    showOut("claude update",outBlock("claude update",j.output));
+  }catch(e){showOut("claude update",`<div class="errline">${ic("bad")} ${t("failed")}</div>`);}
+  finally{setBusy(btn,false);}
 }
 async function runDoctor(btn){
-  btn.disabled=true;btn.textContent=t("running");
+  setBusy(btn,true);
+  showOut(t("diag"),`<div class="tmsg" style="padding:0"><span class="spin"></span>${t("running")} (~15s)</div>`);
   try{
     const r=await fetch("/api/doctor");const j=await r.json();
-    $("doctorOut").innerHTML=j.checks.map(c=>
-      `<div class="muted" style="margin-top:.5rem;direction:ltr;text-align:left">$ ${esc(c.cmd)}</div><pre class="out">${esc(c.output)}</pre>`).join("");
-  }finally{btn.disabled=false;btn.textContent=t("run_diag");}
+    showOut(t("diag"),arr(j.checks).map(c=>outBlock(c.cmd,c.output)).join("")||`<div class="muted">${t("none")}</div>`);
+  }catch(e){showOut(t("diag"),`<div class="errline">${ic("bad")} ${t("no_server")}</div>`);}
+  finally{setBusy(btn,false);}
 }
 function renderSettings(){
-  $("settings").innerHTML=`
-    <div class="row"><div><div class="name">${t("model_row")} ${Q("model_tip")}</div></div>
-      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-next">${t("next_session")}</span>
-      <select onchange="api('/api/model',{model:this.value}).then(()=>toast(t('saved')))">
-        ${S.models.map(m=>`<option value="${m}" ${S.model===m?"selected":""}>${m}</option>`).join("")}</select></div></div>
-    <div class="row"><div><div class="name">${t("sounds")} ${Q("sounds_tip")}</div></div>
-      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-live">${t("immediate")}</span>
+  $("settings").innerHTML=
+    mrow(`${t("model_row")} ${Q("model_tip")}`,"",
+      `<span class="tag t-next">${t("next_session")}</span>
+      <select class="settings-sel" onchange="api('/api/model',{model:this.value}).then(()=>toast(t('saved')))">
+        ${S.models.map(m=>`<option value="${esc(m)}" ${S.model===m?"selected":""}>${esc(m)}</option>`).join("")}</select>`)
+   +mrow(`${t("sounds")} ${Q("sounds_tip")}`,"",
+      `<span class="tag t-live">${t("immediate")}</span>
       <label class="tg"><input type="checkbox" ${S.sounds?"checked":""}
-        onchange="api('/api/sounds',{enabled:this.checked}).then(()=>toast(t('updated')))"><span></span></label></div></div>
-    ${S.plugins.map(p=>`
-    <div class="row"><div><div class="name">${esc(p.name.split("@")[0])} ${Q("plugin_tip")}</div>
-      <div class="hint">${esc(p.name.split("@")[1]||"")}</div></div>
-      <div style="display:flex;gap:.5rem;align-items:center"><span class="tag t-next">${t("next_session")}</span>
+        onchange="api('/api/sounds',{enabled:this.checked}).then(()=>toast(t('updated')))"><span></span></label>`)
+   +arr(S.plugins).map(p=>mrow(`<span class="trunc" title="${esc(p.name)}">${esc(p.name.split("@")[0])}</span> ${Q("plugin_tip")}`,
+      esc(p.name.split("@")[1]||""),
+      `<span class="tag t-next">${t("next_session")}</span>
       <label class="tg"><input type="checkbox" ${p.enabled?"checked":""}
-        onchange="api('/api/plugin',{name:'${p.name}',enabled:this.checked}).then(()=>toast(t('saved')))"><span></span></label></div></div>`).join("")}`;
+        onchange="api('/api/plugin',{name:'${esc(p.name)}',enabled:this.checked}).then(()=>toast(t('saved')))"><span></span></label>`,"trunc")).join("");
 }
 function renderFiles(){
-  $("files").innerHTML=`
-    <div class="row"><div><div class="name"><span class="cmd">~/.claude/CLAUDE.md</span>
-        ${Q("md_tip")}<span class="tag t-est">~${S.claude_md.tokens}k</span></div>
-      <div class="hint">${t("md_h")}</div></div>
-      <button onclick="editMd()">${t("edit_btn")}</button></div>
-    <div class="row"><div><div class="name"><span class="cmd">settings.json</span></div>
-      <div class="hint">${t("settings_h")}</div></div>
-      <button onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("open_btn")}</button></div>
-    <div class="row"><div><div class="name"><span class="cmd">~/.claude</span></div>
-      <div class="hint">${t("base_dir_h")}</div></div>
-      <button onclick="api('/api/open',{what:'claude-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button></div>`;
+  $("files").innerHTML=
+    mrow(`<span class="cmd">~/.claude/CLAUDE.md</span> ${Q("md_tip")}<span class="tag t-est">~${S.claude_md.tokens}k</span>`,t("md_h"),
+      `<button class="sm" onclick="editMd()">${t("edit_btn")}</button>`,"trunc")
+   +mrow(`<span class="cmd">settings.json</span>`,t("settings_h"),
+      `<button class="sm" onclick="api('/api/open',{what:'settings'}).then(()=>toast(t('opened_editor')))">${t("open_btn")}</button>`,"trunc")
+   +mrow(`<span class="cmd">~/.claude</span>`,t("base_dir_h"),
+      `<button class="sm" onclick="api('/api/open',{what:'claude-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button>`,"trunc");
 }
 function editMd(){api("/api/claude-md/get",{}).then(j=>{$("mdContent").value=j.content;$("ovMd").classList.add("on");});}
 function saveMd(){api("/api/claude-md/save",{content:$("mdContent").value}).then(()=>{closeOv("ovMd");toast(t("saved"));});}
 function renderMcp(){
-  $("mcpList").innerHTML=S.mcp_profiles.length?S.mcp_profiles.map(p=>`
-    <div class="row"><div><div class="name"><span class="cmd">${esc(p.file)}</span></div>
-      <div class="hint">${p.servers.length?esc(p.servers.join(" · ")):t("empty_lbl")}</div></div></div>`).join("")
-    :`<div class="muted">${t("mcp_empty")}</div>`;
+  $("mcpList").innerHTML=S.mcp_profiles.length?S.mcp_profiles.map(p=>{
+    const sv=p.servers.length?p.servers.join(" · "):"";
+    return mrow(`<span class="cmd">${esc(p.file)}</span>`,
+      sv?`<span title="${esc(sv)}">${esc(sv)}</span>`:t("empty_lbl"),"","trunc");}).join("")
+    :`<div class="tmsg">${t("mcp_empty")}</div>`;
 }
 function renderHooks(){
   $("hooksList").innerHTML=S.hooks.length?S.hooks.map(h=>{
-    const tip=I18N[L]["hk_"+h.event]||"";
-    return `<div class="row"><div><div class="name"><span class="cmd">${esc(h.event)}</span>
-        ${tip?`<span class="q" data-tip="${esc(tip)}">?</span>`:""}</div>
-      <div class="hint" style="direction:ltr;text-align:end">${esc((h.scripts||[]).join(" · "))}</div></div>
-      <span class="muted">${h.count} hooks</span></div>`;}).join("")
-    :`<div class="muted">${t("hooks_empty")}</div>`;
+    const tip=I18N[L]["hk_"+h.event]||"",sc=(h.scripts||[]).join(" · ");
+    return mrow(`<span class="cmd">${esc(h.event)}</span> ${tip?`<span class="q" data-tip="${esc(tip)}">?</span>`:""}`,
+      `<span dir="ltr" title="${esc(sc)}">${esc(sc)}</span>`,
+      `<span class="muted">${h.count} hooks</span>`,"trunc");}).join("")
+    :`<div class="tmsg">${t("hooks_empty")}</div>`;
 }
 function renderRules(){
-  $("rulesList").innerHTML=S.rules.length?S.rules.map(r=>`
-    <div class="row"><div><div class="name">${esc(r.file.replace(/\.mdc?$/,""))}
-        <span class="tag t-est">~${r.tokens}k</span></div>
-      <div class="hint">${esc(r.title)}</div></div>
-      <div style="display:flex;gap:.3rem">
-        <button onclick="editRule('${r.file}')">${t("edit_btn")}</button>
-        <button class="ghost" onclick="delRule('${r.file}')">✕</button></div></div>`).join("")
-    :`<div class="muted">${t("rules_empty")}</div>`;
+  $("rulesList").innerHTML=S.rules.length?S.rules.map(r=>mrow(
+      `<span class="trunc">${esc(r.file.replace(/\.mdc?$/,""))}</span> <span class="tag t-est">~${r.tokens}k</span>`,
+      `<span title="${esc(r.title||"")}">${esc(r.title||"")}</span>`,
+      `<button class="sm" onclick="editRule('${esc(r.file)}')">${t("edit_btn")}</button>
+        <button class="ib sm danger" onclick="delRule('${esc(r.file)}')" aria-label="${esc(t("del"))}" data-tip="${esc(t("del"))}">${ic("x")}</button>`,"trunc")).join("")
+    :`<div class="tmsg">${t("rules_empty")}</div>`;
 }
 function editRule(file){
   editingRule=file;
@@ -1002,38 +2215,37 @@ function renderSkills(){
     .filter(r=>r.n.toLowerCase().includes(q))
     .sort((a,b)=>(b.on-a.on)||a.n.localeCompare(b.n));
   $("skCount").textContent=`${S.skills.active.length} ${t("active_c")} · ${S.skills.archive.length} ${t("archived_c")}`;
-  $("skillsTable").innerHTML=`<table><tr><th>${t("skill_col")}</th><th style="width:120px">${t("state_col")}</th></tr>`+
-    rows.map(r=>`<tr><td class="cmd" style="background:none">${esc(r.n)}</td>
-      <td><div style="display:flex;gap:.45rem;align-items:center">
+  $("skillsTable").innerHTML=`<table class="dtable"><colgroup><col><col style="width:150px"></colgroup>
+    <thead><tr><th>${t("skill_col")}</th><th>${t("state_col")}</th></tr></thead><tbody>`+
+    (rows.map(r=>`<tr><td class="code" title="${esc(r.n)}">${esc(r.n)}</td>
+      <td><div class="cellflex">
         <label class="tg"><input type="checkbox" ${r.on?"checked":""}
-          onchange="api('/api/skill',{name:'${r.n}',action:this.checked?'activate':'archive'}).then(()=>toast(t('updated')))"><span></span></label>
-        <span class="hint">${r.on?t("active_lbl"):t("archive_lbl")}</span></div></td></tr>`).join("")+`</table>`;
+          onchange="api('/api/skill',{name:'${esc(r.n)}',action:this.checked?'activate':'archive'}).then(()=>toast(t('updated')))"><span></span></label>
+        <span class="hint">${r.on?t("active_lbl"):t("archive_lbl")}</span></div></td></tr>`).join("")
+     ||`<tr><td colspan="2" class="c-muted">${t("none")}</td></tr>`)+`</tbody></table>`;
 }
 function renderDesktop(){
-  const d=S.desktop;
-  $("desktopSec").innerHTML=`
-    <div class="row"><div><div class="name">${t("connectors")} ${Q("connectors_tip")}</div>
-      <div class="hint">${t("connectors_h")}</div>
-      <div class="hint">${t("conn_note")}</div></div>
-      <button onclick="api('/api/open',{what:'connectors'}).then(()=>toast(t('opened_browser')))">${t("store")}</button></div>
-    ${d.exists?`<div class="row"><div><div class="name">${t("chat_mcp")} ${Q("chat_mcp_tip")}</div>
-      <div class="hint">${d.mcp_servers.map(s=>esc(s.name)).join(" · ")||"—"}</div></div>
-      <button onclick="api('/api/open',{what:'desktop-config'}).then(()=>toast(t('opened_editor')))">${t("open_cfg")}</button></div>`:""}
-    <div class="row"><div><div class="name">${t("plugins_dir")}</div>
-      <div class="hint"><span class="cmd">~/.claude/plugins</span></div></div>
-      <button onclick="api('/api/open',{what:'plugins-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button></div>`;
+  const d=S.desktop||{};
+  const srv=arr(d.mcp_servers).map(s=>s.name).join(" · ")||"—";
+  $("desktopSec").innerHTML=
+    mrow(`${t("connectors")} ${Q("connectors_tip")}`,`<span title="${esc(t("conn_note"))}">${t("connectors_h")}</span>`,
+      `<button class="sm" onclick="api('/api/open',{what:'connectors'}).then(()=>toast(t('opened_browser')))">${t("store")}</button>`,"trunc")
+   +(d.exists?mrow(`${t("chat_mcp")} ${Q("chat_mcp_tip")}`,`<span title="${esc(srv)}">${esc(srv)}</span>`,
+      `<button class="sm" onclick="api('/api/open',{what:'desktop-config'}).then(()=>toast(t('opened_editor')))">${t("open_cfg")}</button>`,"trunc"):"")
+   +mrow(t("plugins_dir"),`<span class="cmd">~/.claude/plugins</span>`,
+      `<button class="sm" onclick="api('/api/open',{what:'plugins-dir'}).then(()=>toast(t('opened_finder')))">${t("open_btn")}</button>`,"trunc");
 }
 function renderDashCfg(){
+  const n=(S.repos||[]).length;
   $("dashcfg").innerHTML=`
-    <div class="row"><div style="flex:1"><div class="name">${t("code_dir")} ${Q("code_dir_tip")}</div>
-      <div style="display:flex;gap:.5rem;margin-top:.3rem;max-width:430px">
+    <div class="row"><div><div class="name">${t("code_dir")} ${Q("code_dir_tip")}</div>
+      <div class="field-inline">
         <input type="text" id="cfgCode" dir="ltr" value="${esc(S.config.code_dir||"")}" placeholder="~/projects">
         <button onclick="api('/api/config',{code_dir:$('cfgCode').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
-      <div class="hint" style="margin-top:.3rem">${(S.repos||[]).length?t("repos_found").replace("{n}",(S.repos||[]).length):t("no_code_dir")}</div></div></div>
-    <div class="row"><div><div class="name">${t("alias_row")} ${Q("alias_tip")}</div>
-      <div class="hint"><span class="cmd">alias cl-dash='python3 ~/.claude/dashboard/server.py'</span></div></div>
-      ${S.alias_installed?`<span class="tag t-live">${t("alias_installed")}</span>`
-        :`<button class="primary" onclick="api('/api/install-alias',{}).then(()=>toast(t('saved')))">${t("alias_install")}</button>`}</div>`;
+      <div class="hint">${n?t("repos_found").replace("{n}",n):t("no_code_dir")}</div></div></div>`
+   +mrow(`${t("alias_row")} ${Q("alias_tip")}`,`<span class="cmd" title="alias cl-dash='python3 ~/.claude/dashboard/server.py'">alias cl-dash='python3 ~/.claude/dashboard/server.py'</span>`,
+      S.alias_installed?`<span class="tag t-live">${t("alias_installed")}</span>`
+        :`<button class="sm primary" onclick="api('/api/install-alias',{}).then(()=>toast(t('saved')))">${t("alias_install")}</button>`,"trunc");
 }
 
 /* monitor */
@@ -1043,15 +2255,21 @@ function setMetric(btn){
   drawChart();
 }
 async function loadMonitor(){
-  $("chart").innerHTML=`<div class="muted">${t("loading")}</div>`;
-  const r=await fetch("/api/monitor");M=await r.json();
-  renderMonitor();
+  if(!M){
+    const ld=`<div class="tmsg"><span class="spin"></span>${t("loading")}</div>`;
+    $("chart").innerHTML=ld;
+    ["tblModels","tblProjects","tblMatrix"].forEach(id=>$(id).innerHTML=`<tbody><tr><td>${ld}</td></tr></tbody>`);
+  }
+  try{
+    const r=await fetch("/api/monitor");if(!r.ok)throw new Error(r.status);
+    M=await r.json();renderMonitor();renderCards();
+  }catch(e){if(!M)$("chart").innerHTML=`<div class="tmsg">${errLine("loadMonitor()")}</div>`;}
 }
 function renderMonitor(){
-  if(!M)return;
+  if(!M||!$("kpis"))return;
   const lim=M.limits||{};
   const ses=Math.floor(lim.five_hour?.utilization??0),wk=Math.floor(lim.seven_day?.utilization??0);
-  const today=M.days[M.days.length-1]||{},w=M.week||{};
+  const days=arr(M.days),today=days[days.length-1]||{},w=M.week||{};
   let age="";
   const ua=parseInt(lim.updated_at||0);
   if(ua){const m=Math.round((Date.now()/1000-ua)/60);
@@ -1067,44 +2285,59 @@ function renderMonitor(){
     <div class="kpi"><div class="l">${t("mon_week")} ${Q("mon_week_tip")}</div>
       <div class="n">${fmtTok(w.output)}</div><div class="l">${w.messages||0} ${t("msgs")} · ${fmtTok(w.cache)} cache</div></div>`;
   drawChart();
-  const mx1=M.models[0]?.[1]||1,mx2=M.projects[0]?.[1]||1;
-  $("tblModels").innerHTML=`<tr><th>${t("model_col")}</th><th>${t("msgs")}</th><th style='width:45%'></th></tr>`+
-    (M.models.map(([m,c])=>`<tr><td class="cmd" style="background:none">${esc(m)}</td><td>${c}</td>
-      <td><div class="bar"><i style="width:${Math.round(c/mx1*100)}%;background:var(--blue)"></i></div></td></tr>`).join("")||"<tr><td>—</td></tr>");
-  $("tblProjects").innerHTML=`<tr><th>${t("proj_col")}</th><th>Output</th><th style='width:45%'></th></tr>`+
-    (M.projects.map(([p,c])=>`<tr><td class="cmd" style="background:none">${esc(p)}</td><td>${fmtTok(c)}</td>
-      <td><div class="bar"><i style="width:${Math.round(c/mx2*100)}%;background:var(--accent)"></i></div></td></tr>`).join("")||"<tr><td>—</td></tr>");
+  const models=arr(M.models),projects=arr(M.projects);
+  const mx1=models[0]?.[1]||1,mx2=projects[0]?.[1]||1;
+  const empty=n=>`<tr><td colspan="${n}" class="c-muted">—</td></tr>`;
+  const barTbl=(head,col2,rows,mx,fmt,color)=>`<colgroup><col><col style="width:96px"><col style="width:38%"></colgroup>
+    <thead><tr><th>${head}</th><th>${col2}</th><th></th></tr></thead><tbody>`+
+    (rows.map(([n,c])=>`<tr><td class="code" title="${esc(n)}">${esc(n)}</td><td class="num">${fmt(c)}</td>
+      <td><div class="bar" style="margin-top:0"><i style="width:${Math.round(c/mx*100)}%;background:${color}"></i></div></td></tr>`).join("")||empty(3))+`</tbody>`;
+  $("tblModels").innerHTML=barTbl(t("model_col"),t("msgs"),models,mx1,v=>v,"var(--blue)");
+  $("tblProjects").innerHTML=barTbl(t("proj_col"),"Output",projects,mx2,fmtTok,"var(--accent)");
   const mt=M.matrix||{projects:[],models:[],cells:{}};
-  $("tblMatrix").innerHTML=`<tr><th>${t("proj_col")}</th>${mt.models.map(m=>`<th class="cmd" style="background:none">${esc(m)}</th>`).join("")}</tr>`+
-    (mt.projects.map(p=>`<tr><td class="cmd" style="background:none">${esc(p)}</td>
+  $("tblMatrix").innerHTML=`<colgroup><col style="width:32%">${mt.models.map(()=>"<col>").join("")}</colgroup>
+    <thead><tr><th>${t("proj_col")}</th>${mt.models.map(m=>`<th class="code" title="${esc(m)}">${esc(m)}</th>`).join("")}</tr></thead><tbody>`+
+    (mt.projects.map(p=>`<tr><td class="code" title="${esc(p)}">${esc(p)}</td>
       ${mt.models.map(m=>{const v=mt.cells[p]?.[m]||0;
-        return `<td style="${v?"":"color:var(--muted)"}">${v?fmtTok(v):"·"}</td>`;}).join("")}</tr>`).join("")||"<tr><td>—</td></tr>");
+        return `<td class="num code" style="${v?"":"color:var(--muted)"}">${v?fmtTok(v):"·"}</td>`;}).join("")}</tr>`).join("")
+     ||empty(1+mt.models.length))+`</tbody>`;
 }
+// the chart is drawn at the real pixel size of its box, so it fills the panel without stretching text
 function drawChart(){
-  if(!M)return;
-  const days=M.days,vals=days.map(d=>d[metric]||0),mx=Math.max(...vals,1);
-  const W=680,H=180,P=44,bw=Math.floor((W-P)/days.length)-14;
+  const box=$("chart");if(!M||!box)return;
+  const W=Math.floor(box.clientWidth-40),Hh=Math.floor(box.clientHeight-32);
+  if(W<120||Hh<120)return;
+  const days=arr(M.days),vals=days.map(d=>d[metric]||0),mx=Math.max(...vals,1);
+  const P=44,T=20,B=40,H=Hh-T-B,n=Math.max(days.length,1),slot=(W-P)/n,bw=Math.max(8,Math.min(72,slot-16));
   const fmt=metric==="messages"?(v=>v):fmtTok;
   let grid="";
-  for(let i=0;i<=3;i++){const y=H-Math.round(H*i/3);
+  for(let i=0;i<=3;i++){const y=T+H-Math.round(H*i/3);
     grid+=`<line x1="${P}" y1="${y}" x2="${W}" y2="${y}" stroke="var(--line)" stroke-width="1"/>
       <text x="${P-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmt(Math.round(mx*i/3))}</text>`;}
-  $("chart").innerHTML=`<svg viewBox="0 -18 ${W} ${H+52}" style="width:100%;direction:ltr">
+  box.innerHTML=`<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" style="direction:ltr">
     ${grid}
-    ${days.map((d,i)=>{const v=d[metric]||0,h=Math.round(v/mx*H)||1,x=P+i*(bw+14)+7;
+    ${days.map((d,i)=>{const v=d[metric]||0,h=Math.round(v/mx*H)||1,cx=P+slot*i+slot/2,x=cx-bw/2;
       const last=i===days.length-1;
       return `<g><title>${d.date} · ${fmt(v)}</title>
-        <rect x="${x}" y="${H-h}" width="${bw}" height="${h}" rx="6"
+        <rect x="${x}" y="${T+H-h}" width="${bw}" height="${h}" rx="6"
           fill="${last?"var(--accent)":"var(--blue)"}" opacity="${last?1:.75}"/>
-        <text x="${x+bw/2}" y="${H-h-6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">${fmt(v)}</text>
-        <text x="${x+bw/2}" y="${H+18}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.date.slice(5).replace("-","/")}</text>
-        <text x="${x+bw/2}" y="${H+32}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${t("dow")[new Date(d.date).getDay()]}</text></g>`;}).join("")}
+        <text x="${cx}" y="${T+H-h-6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">${fmt(v)}</text>
+        <text x="${cx}" y="${T+H+18}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.date.slice(5).replace("-","/")}</text>
+        <text x="${cx}" y="${T+H+32}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${t("dow")[new Date(d.date).getDay()]}</text></g>`;}).join("")}
   </svg>`;
 }
+let chartRO=null;
+function watchChart(){
+  if(!window.ResizeObserver||!$("chart"))return;
+  if(chartRO)chartRO.disconnect();
+  let raf=0;
+  chartRO=new ResizeObserver(()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(drawChart);});
+  chartRO.observe($("chart"));
+}
 
-function tick(){$("clock").textContent=t("sub")+" · "+new Date().toLocaleTimeString(L==="he"?"he-IL":"en-GB",{hour:"2-digit",minute:"2-digit"});}
-buildStatic();tick();setInterval(tick,30000);
-api("/api/state").then(j=>{S=j;renderAll();});
+document.documentElement.lang=L;
+buildStatic();route(true);renderRc();renderLogs(true);
+api("/api/state").then(j=>{S=j;renderAll();}).catch(()=>{});
 </script>
 </body>
 </html>

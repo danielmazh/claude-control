@@ -6,3 +6,10 @@ config.json
 .session-rules.md
 __pycache__/
 .DS_Store
+
+# dev data dir (CC_DATA=$PWD/.devdata)
+.devdata/
+
+# local design exports (personal data) and local launch config
+design/
+.claude/launch.json

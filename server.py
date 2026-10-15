@@ -19,9 +19,9 @@ browser; /api/shutdown stops it.
 
 Run: python3 server.py   (suggested alias: cl-dash)
 """
-import json, os, re, shutil, socket, subprocess, threading, time, webbrowser
+import json, os, re, shlex, shutil, signal, socket, subprocess, threading, time, urllib.error, urllib.request, webbrowser
 from datetime import datetime, timedelta
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 HOME = Path.home()
@@ -37,14 +37,18 @@ CLAUDE_JSON = HOME / ".claude.json"
 INSTALLED = CL / "plugins" / "installed_plugins.json"
 RATE_LIMITS = CL / "statusline-cache" / "rate-limits.json"
 SKILLS_TOK = CL / "statusline-cache" / "skills.tok"
-USER_PRESETS = DASH / "presets.json"
-DASH_CONFIG = DASH / "config.json"
-MONITOR_CACHE = DASH / ".monitor-cache.json"
-SOUNDS_OFF_FLAG = DASH / ".sounds-off"
-SESSION_RULES = DASH / ".session-rules.md"
+# runtime data dir: CC_DATA lets a dev copy run next to the live one without
+# sharing presets/config/cache (default: next to this file, as before)
+DATA = Path(os.environ.get("CC_DATA") or DASH).expanduser().resolve()
+DATA.mkdir(parents=True, exist_ok=True)
+USER_PRESETS = DATA / "presets.json"
+DASH_CONFIG = DATA / "config.json"
+MONITOR_CACHE = DATA / ".monitor-cache.json"
+SOUNDS_OFF_FLAG = DATA / ".sounds-off"
+SESSION_RULES = DATA / ".session-rules.md"
 DESKTOP_CFG = HOME / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
 PROJECTS = CL / "projects"
-PORT = 7799
+PORT = int(os.environ.get("CC_PORT") or 7799)
 
 CLT_FULL = ("Bash,Read,Edit,Write,TaskCreate,TaskUpdate,TaskStop,TaskOutput,"
             "WebFetch,WebSearch,Agent,AskUserQuestion,Skill")
@@ -298,6 +302,33 @@ def mcp_profiles():
             for f in sorted(MCP_DIR.glob("*.json"))] if MCP_DIR.is_dir() else []
 
 
+# shell words that are never the "real" command of a hook: tests, flow, wrappers
+HOOK_SKIP = {"[", "[[", "]", "]]", "test", "true", "false", "!", "if", "then", "else",
+             "fi", "exit", "cd", "export", "source", ".", "command", "exec", "env",
+             "nohup", "time", "sudo", "echo", "printf", "{", "}", "(", ")"}
+
+
+def hook_commands(c):
+    """Real command names in a hook line, e.g. `[ -f x ] || afplay y &` -> [afplay].
+    Splits on && || ; | & and skips tests/builtins/VAR=val assignments."""
+    out = []
+    for seg in re.split(r"&&|\|\||[;|&\n]", c):
+        try:
+            words = shlex.split(seg)
+        except ValueError:
+            words = seg.split()
+        if not words or words[0] in ("[", "[[", "test"):
+            continue
+        for w in words:
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", w) or w in HOOK_SKIP:
+                continue
+            name = w.split("/")[-1]
+            if name and not name.startswith("-"):
+                out.append(name)
+            break
+    return out[:2]
+
+
 def hooks_summary():
     hooks = jread(SETTINGS).get("hooks") or {}
     out = []
@@ -307,7 +338,7 @@ def hooks_summary():
             for h in m.get("hooks", []):
                 c = h.get("command", "")
                 found = re.findall(r"([A-Za-z0-9_.-]+\.(?:py|sh|js))", c)
-                scripts += found or ([c.split()[0].split("/")[-1]] if c.strip() else [])
+                scripts += found or hook_commands(c)
         out.append({"event": ev,
                     "count": sum(len(m.get("hooks", [])) for m in matchers),
                     "scripts": sorted(set(s for s in scripts if s))[:6]})
@@ -374,8 +405,20 @@ def claude_update():
 
 
 def remote_control(target):
-    """Open Claude's official phone bridge (`claude remote-control`) in tmux/Terminal.
-    The QR it prints is scanned with the Claude mobile app."""
+    """Claude's official phone bridge (`claude remote-control`). Never starts a
+    second daemon: if one runs, return its environment link from the daemon pane;
+    else ask the watchdog script (which never doubles it) to start it."""
+    d = rc_daemon_proc()
+    if d:
+        info = rc_daemon_pane()
+        return {"running": True, "pid": d["pid"], "env_link": info["env_link"],
+                "tmux": RC_DAEMON_TARGET}
+    if WATCHDOG_SH.exists():
+        subprocess.Popen(["/bin/zsh", str(WATCHDOG_SH)], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+        return {"starting": True, "tmux": RC_DAEMON_TARGET}
+    # no watchdog on this machine: open it the old way (tmux/Terminal)
     cmd = "claude remote-control"
     if target.get("type") == "tmux":
         if shutil.which("tmux") is None:
@@ -547,29 +590,59 @@ def open_target(what):
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*(\x07|\x1b\\)|\r")
 
 
+def _cli_check(label, args, timeout=25):
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                           stdin=subprocess.DEVNULL,
+                           env={**os.environ, "TERM": "dumb", "NO_COLOR": "1"})
+        txt = (r.stdout or "") + (("\n" + r.stderr) if r.stderr.strip() else "")
+        txt = ANSI_RE.sub("", txt)
+        lines = [l.rstrip() for l in txt.splitlines()]
+        txt = "\n".join(l for i, l in enumerate(lines)
+                        if l.strip() or (i > 0 and lines[i - 1].strip()))
+        return {"cmd": label, "output": txt.strip()[:6000] or "(no output)"}
+    except FileNotFoundError:
+        return {"cmd": label, "output": "claude CLI not found in PATH"}
+    except subprocess.TimeoutExpired:
+        return {"cmd": label, "output": "(timed out — command may be interactive in this version)"}
+
+
+# `claude mcp list` health-checks every server and can take 30s+: run it in a
+# background thread and serve the last result with its age
+_MCP_LIST = {"res": None, "ts": 0, "running": False}
+_MCP_LOCK = threading.Lock()
+
+
+def _mcp_list_refresh():
+    try:
+        res = _cli_check("claude mcp list", ["claude", "mcp", "list"], timeout=40)
+        with _MCP_LOCK:
+            _MCP_LIST.update(res=res, ts=time.time())
+    finally:
+        _MCP_LIST["running"] = False
+
+
+def mcp_list_cached():
+    with _MCP_LOCK:
+        stale = time.time() - _MCP_LIST["ts"] > 120
+        if stale and not _MCP_LIST["running"]:
+            _MCP_LIST["running"] = True
+            threading.Thread(target=_mcp_list_refresh, daemon=True).start()
+        res = _MCP_LIST["res"]
+    if res is None:
+        return {"cmd": "claude mcp list", "output": "(pending: running in background, refresh in ~40s)",
+                "pending": True}
+    return {**res, "age": int(time.time() - _MCP_LIST["ts"]), "pending": _MCP_LIST["running"]}
+
+
 def doctor():
-    """Diagnostics via Claude's OWN built-in CLI commands only — no extra logic."""
-    out = []
-    cmds = (("claude --version", ["claude", "--version"]),
-            ("claude doctor", ["claude", "doctor"]),
-            ("claude config list", ["claude", "config", "list"]),
-            ("claude mcp list", ["claude", "mcp", "list"]),
-            ("claude plugin list", ["claude", "plugin", "list"]))
-    for label, args in cmds:
-        try:
-            r = subprocess.run(args, capture_output=True, text=True, timeout=25,
-                               stdin=subprocess.DEVNULL,
-                               env={**os.environ, "TERM": "dumb", "NO_COLOR": "1"})
-            txt = (r.stdout or "") + (("\n" + r.stderr) if r.stderr.strip() else "")
-            txt = ANSI_RE.sub("", txt)
-            lines = [l.rstrip() for l in txt.splitlines()]
-            txt = "\n".join(l for i, l in enumerate(lines)
-                            if l.strip() or (i > 0 and lines[i - 1].strip()))
-            out.append({"cmd": label, "output": txt.strip()[:6000] or "(no output)"})
-        except FileNotFoundError:
-            out.append({"cmd": label, "output": "claude CLI not found in PATH"})
-        except subprocess.TimeoutExpired:
-            out.append({"cmd": label, "output": "(timed out — command may be interactive in this version)"})
+    """Diagnostics via Claude's OWN built-in CLI commands only — no extra logic.
+    [20261015] `claude config list` removed: the subcommand no longer exists and
+    the CLI treated it as a prompt (a silent model call)."""
+    out = [_cli_check("claude --version", ["claude", "--version"]),
+           _cli_check("claude doctor", ["claude", "doctor"]),
+           mcp_list_cached(),
+           _cli_check("claude plugin list", ["claude", "plugin", "list"])]
     return out
 
 
@@ -667,6 +740,839 @@ def monitor():
     return result
 
 
+# ── Remote Control health: resumed sessions + phone daemon ───────────────────
+# Reads the machine's own tooling: sessions.conf, claude-rc-resume.sh,
+# claude-rc-watchdog.sh, their launchd agents and logs, tmux panes. The CC_RC_*
+# env overrides exist only so a test can point actions at a throwaway tmux session.
+RC_CONF = Path(os.environ.get("CC_RC_CONF") or HOME / ".config" / "claude-rc" / "sessions.conf")
+RC_SESSION = os.environ.get("CC_RC_SESSION") or "rc-resume"
+RC_DAEMON_TARGET = "claude-RC-general:rc-daemon"
+RC_DAEMON_LOG = HOME / "Library" / "Logs" / "claude-rc-daemon.log"   # written by tmux pipe-pane in the watchdog
+RESUME_SH = HOME / ".local" / "bin" / "claude-rc-resume.sh"
+WATCHDOG_SH = HOME / ".local" / "bin" / "claude-rc-watchdog.sh"
+LOGS_DIR = HOME / "Library" / "Logs"
+WATCHDOG_LOG = LOGS_DIR / "claude-rc-watchdog.log"
+RESUME_LOG = LOGS_DIR / "claude-rc-resume.log"
+FORTI_LOGS = Path("/Library/Application Support/Fortinet/FortiClient/Logs")
+LAUNCH_AGENTS = {"watchdog": "com.daniel.claude-rc-watchdog",
+                 "resume": "com.daniel.claude-rc-resume"}
+UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+RC_NAME_RE = re.compile(r"[A-Za-z0-9._-]{1,40}")
+QR_CHARS = re.compile(r"[█▀▄]")
+
+
+def sh(args, timeout=5, env=None):
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                           stdin=subprocess.DEVNULL, env=env)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as e:
+        return -1, str(e)
+
+
+def claude_bin():
+    """Same choice as the watchdog: newest nvm claude, else homebrew, else PATH."""
+    c = sorted((HOME / ".nvm" / "versions" / "node").glob("*/bin/claude"),
+               key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+    for p in c + [Path("/opt/homebrew/bin/claude")]:
+        if os.access(p, os.X_OK):
+            return str(p)
+    return shutil.which("claude") or "claude"
+
+
+def rc_conf_entries():
+    out = []
+    try:
+        for line in RC_CONF.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("|")
+            if len(parts) >= 2 and parts[0] and parts[1]:
+                out.append({"name": parts[0], "uuid": parts[1],
+                            "dir": parts[2] if len(parts) > 2 and parts[2] else str(HOME / "c-projects")})
+    except Exception:
+        pass
+    return out
+
+
+def ps_list():
+    """[{pid, started(epoch), cmd}] for every process."""
+    rc, out = sh(["ps", "-axww", "-o", "pid=,lstart=,command="])
+    procs = []
+    for line in out.splitlines():
+        parts = line.split(None, 6)
+        if len(parts) < 7:
+            continue
+        try:
+            started = datetime.strptime(" ".join(parts[1:6]), "%a %b %d %H:%M:%S %Y").timestamp()
+            procs.append({"pid": int(parts[0]), "started": started, "cmd": parts[6]})
+        except ValueError:
+            continue
+    return procs
+
+
+def resume_pids(procs):
+    out = {}
+    for p in procs:
+        m = re.search(r"--resume[ =](" + UUID_RE.pattern + ")", p["cmd"])   # Claude Desktop uses --resume=
+        if m and "claude" in p["cmd"] and not p["cmd"].startswith(("grep", "pgrep")):
+            out.setdefault(m.group(1), p["pid"])
+    return out
+
+
+def rc_daemon_proc(procs=None):
+    for p in procs or ps_list():
+        first = p["cmd"].split()[0] if p["cmd"] else ""
+        if re.search(r"(^|/)claude remote-control$", p["cmd"]) and \
+                os.path.basename(first) not in ("caffeinate", "pgrep", "grep"):
+            return p
+    return None
+
+
+def pane(target, lines=400):
+    rc, out = sh(["tmux", "capture-pane", "-p", "-J", "-t", target, "-S", f"-{lines}"])
+    return out if rc == 0 else ""
+
+
+def session_pane_state(text):
+    """rc + link + waiting from a resumed session's pane."""
+    lines = text.splitlines()
+    rc, link = "unknown", None
+    for l in lines:
+        if "/remote-control is active" in l:
+            rc = "connected"
+        elif "Remote Control disconnected" in l:
+            rc = "disconnected"
+        m = re.search(r"https://claude\.ai/code/session_[A-Za-z0-9]+", l)
+        if m:
+            link = m.group(0)
+    tail = [l for l in lines if l.strip()][-25:]
+    waiting = any(re.match(r"\s*❯\s*1\.", l) for l in tail)
+    busy_dialog = any("Background work is running" in l for l in tail)
+    return rc, link, waiting, busy_dialog
+
+
+def transcript_path(d, uuid):
+    return PROJECTS / re.sub(r"[/.]", "-", d) / f"{uuid}.jsonl"
+
+
+def rc_window(name):
+    return f"={RC_SESSION}:={name}"
+
+
+def rc_sessions(procs):
+    pids = resume_pids(procs)
+    _, wins = tmux("list-windows", "-t", f"={RC_SESSION}", "-F", "#{window_name}") \
+        if shutil.which("tmux") else (1, "")
+    wins = set(wins.splitlines())
+    out = []
+    for e in rc_conf_entries():
+        pid = pids.get(e["uuid"])
+        has_win = e["name"] in wins
+        text = pane(rc_window(e["name"])) if has_win else ""
+        rc, link, waiting, _ = session_pane_state(text) if pid else ("unknown", None, False, False)
+        tp = transcript_path(e["dir"], e["uuid"])
+        out.append({"name": e["name"], "uuid": e["uuid"], "dir": e["dir"], "in_list": True,
+                    "running": bool(pid), "pid": pid,
+                    "state": ("waiting" if waiting else "active") if pid else "stopped",
+                    "rc": rc, "link": link,
+                    "last_activity": tp.stat().st_mtime if tp.exists() else None,
+                    "window": f"{RC_SESSION}:{e['name']}" if has_win else None})
+    return out
+
+
+def rc_daemon_pane():
+    text = pane(RC_DAEMON_TARGET, 400)
+    lines = [l.rstrip() for l in text.splitlines() if l.strip() and not QR_CHARS.search(l)]
+    status, env_link = "", None
+    for l in lines:
+        m = re.search(r"·✔︎?·\s*(\w+)", l)
+        if m:
+            status = m.group(1)
+        m = re.search(r"https://claude\.ai/code\?environment=env_[A-Za-z0-9]+", l)
+        if m:
+            env_link = m.group(0)
+    if not env_link:                   # link scrolled away: the watchdog pipes daemon output to a log
+        try:
+            with open(RC_DAEMON_LOG, "rb") as f:
+                f.seek(max(0, f.seek(0, 2) - 200_000))
+                found = re.findall(rb"https://claude\.ai/code\?environment=env_[A-Za-z0-9]+", f.read())
+            env_link = found[-1].decode() if found else None
+        except OSError:
+            pass
+    events = [l.strip() for l in lines if re.match(r"\s*\[\d\d:\d\d:\d\d\]", l)]
+    if not status and events:          # status line scrolled away: infer from last event
+        last = events[-1].lower()
+        status = "Error" if ("giving up" in last or "error" in last) else \
+                 "Connected" if ("reconnected" in last or "connected" in last) else ""
+    return {"status": status, "env_link": env_link, "last_events": events[-8:], "lines": lines}
+
+
+def check_network():
+    t0 = time.time()
+    try:
+        urllib.request.urlopen(urllib.request.Request("https://api.anthropic.com/", method="GET"),
+                               timeout=6)
+        up = True
+    except urllib.error.HTTPError:
+        up = True                        # any HTTP answer means the network is up
+    except Exception:
+        up = False
+    return {"up": up, "ms": int((time.time() - t0) * 1000)}
+
+
+def check_vpn():
+    rc, out = sh(["scutil", "--nc", "list"])
+    for l in out.splitlines():
+        if "com.fortinet" in l:
+            return {"present": True, "connected": "(Connected)" in l}
+    return {"present": False, "connected": False}
+
+
+_AUTH = {"v": None, "ts": 0}
+
+
+def check_auth():
+    if _AUTH["v"] and time.time() - _AUTH["ts"] < 60:
+        return _AUTH["v"]
+    rc, out = sh([claude_bin(), "auth", "status"], timeout=8,
+                 env={**os.environ, "ANTHROPIC_BASE_URL": "", "NO_COLOR": "1"})
+    try:
+        d = json.loads(out[out.index("{"):out.rindex("}") + 1])
+        v = {"ok": True, "loggedIn": bool(d.get("loggedIn")),
+             "subscriptionType": d.get("subscriptionType") or "", "email": d.get("email") or ""}
+    except Exception:
+        v = {"ok": False, "loggedIn": False, "subscriptionType": "", "email": ""}
+    _AUTH.update(v=v, ts=time.time())
+    return v
+
+
+def check_launchd(label):
+    rc, out = sh(["launchctl", "print", f"gui/{os.getuid()}/{label}"])
+    if rc != 0:
+        return {"loaded": False, "state": "", "last_exit": None, "runs": 0}
+    st = re.search(r"^\s*state = (.+)$", out, re.M)
+    ex = re.search(r"last exit code = (-?\d+)", out)
+    runs = re.search(r"runs = (\d+)", out)
+    return {"loaded": True, "state": st.group(1).strip() if st else "",
+            "last_exit": int(ex.group(1)) if ex else None,
+            "runs": int(runs.group(1)) if runs else 0}
+
+
+def _fix(kind, label, action=None, command=None, link=None):
+    f = {"kind": kind, "label": label}
+    if action:
+        f["action"] = action
+    if command:
+        f["command"] = command
+    if link:
+        f["link"] = link
+    return f
+
+
+ACTION = {"state": None}          # the running / last background action
+ACTION_LOCK = threading.Lock()
+_RC_CACHE = {"v": None, "ts": 0}
+_RC_LOCK = threading.Lock()
+
+
+def rc_status(force=False):
+    with _RC_LOCK:
+        if not force and _RC_CACHE["v"] and time.time() - _RC_CACHE["ts"] < 3:
+            return {**_RC_CACHE["v"], "running_action": action_state()}
+        res = {}
+        jobs = {"network": check_network, "vpn": check_vpn, "auth": check_auth,
+                "procs": ps_list,
+                **{k: (lambda l=l: check_launchd(l)) for k, l in LAUNCH_AGENTS.items()}}
+
+        def run(k, fn):
+            try:
+                res[k] = fn()
+            except Exception as e:
+                res[k] = {"error": str(e)}
+        ts = [threading.Thread(target=run, args=(k, fn), daemon=True) for k, fn in jobs.items()]
+        for t in ts:
+            t.start()
+        deadline = time.time() + 3.5
+        for t in ts:
+            t.join(max(0.0, deadline - time.time()))
+        net = res.get("network") or {"up": False, "ms": 6000, "timeout": True}
+        vpn = res.get("vpn") or {"present": False, "connected": False}
+        auth = res.get("auth") or {"ok": False, "loggedIn": False}
+        procs = res.get("procs") or []
+        sessions = rc_sessions(procs)
+        dproc = rc_daemon_proc(procs)
+        dpane = rc_daemon_pane()
+        daemon = {"running": bool(dproc), "pid": dproc["pid"] if dproc else None,
+                  "started": dproc["started"] if dproc else None,
+                  "status": dpane["status"] if dproc else "",
+                  "env_link": dpane["env_link"], "last_events": dpane["last_events"]}
+
+        checks, issues = [], []
+        # network
+        if net.get("up"):
+            checks.append({"id": "network", "title": "רשת", "level": "warn" if net["ms"] > 3000 else "ok",
+                           "detail": f"api.anthropic.com עונה ({net['ms']}ms)"})
+        else:
+            detail = "api.anthropic.com לא עונה."
+            if vpn.get("connected"):
+                detail += " ה-VPN של FortiClient מחובר, ייתכן שהוא הגורם."
+            checks.append({"id": "network", "title": "רשת", "level": "bad", "detail": detail})
+            issues.append({"id": "network", "level": "bad", "title": "אין חיבור ל-Anthropic",
+                           "detail": detail,
+                           "fix": _fix("manual", "בדוק VPN או Wi-Fi" +
+                                       (" (נסה לנתק את FortiClient)" if vpn.get("connected") else ""))})
+        # vpn
+        if vpn.get("present"):
+            checks.append({"id": "vpn", "title": "VPN (FortiClient)", "level": "ok",
+                           "detail": "מחובר" if vpn.get("connected") else "מנותק"})
+        else:
+            checks.append({"id": "vpn", "title": "VPN", "level": "ok", "detail": "לא מוגדר"})
+        # auth
+        if auth.get("loggedIn"):
+            checks.append({"id": "auth", "title": "התחברות", "level": "ok",
+                           "detail": f"מחובר ({auth.get('subscriptionType') or '?'})"})
+        else:
+            d = "לא מחובר לחשבון Claude" if auth.get("ok") else "לא ניתן לבדוק התחברות"
+            fx = _fix("manual", "התחבר מחדש בטרמינל", command="claude auth login")
+            checks.append({"id": "auth", "title": "התחברות", "level": "bad", "detail": d, "action": fx})
+            issues.append({"id": "auth", "level": "bad", "title": "לא מחובר ל-Claude",
+                           "detail": d, "fix": fx})
+        # daemon
+        if dproc:
+            checks.append({"id": "daemon", "title": "שרת Remote Control", "level":
+                           "warn" if daemon["status"] == "Error" else "ok",
+                           "detail": f"רץ (pid {dproc['pid']}) {daemon['status']}".strip()})
+        else:
+            fx = _fix("auto", "הפעל מחדש", action="restart_daemon") if net.get("up") else \
+                _fix("manual", "יופעל מחדש כשהרשת תחזור")
+            checks.append({"id": "daemon", "title": "שרת Remote Control", "level": "warn",
+                           "detail": "לא רץ", "action": fx})
+            issues.append({"id": "daemon", "level": "warn", "title": "שרת Remote Control לא רץ",
+                           "detail": "הטלפון לא יראה סשנים חדשים", "fix": fx})
+        # launchd agents
+        for key, title in (("watchdog", "Watchdog"), ("resume", "שחזור סשנים")):
+            ld = res.get(key) or {"loaded": False}
+            label = LAUNCH_AGENTS[key]
+            cmd = f"launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{label}.plist"
+            bad_exit = ld.get("last_exit") not in (None, 0)
+            if ld.get("loaded") and not bad_exit:
+                checks.append({"id": key, "title": title, "level": "ok",
+                               "detail": f"טעון, {ld.get('runs', 0)} הרצות, יציאה אחרונה 0"})
+            else:
+                d = "לא טעון ב-launchd" if not ld.get("loaded") else f"יציאה אחרונה {ld.get('last_exit')}"
+                fx = _fix("manual", "טען מחדש את הסוכן", command=cmd)
+                checks.append({"id": key, "title": title, "level": "warn", "detail": d, "action": fx})
+                issues.append({"id": key, "level": "warn", "title": f"{title}: {d}", "detail": label,
+                               "fix": fx})
+        # sessions
+        for s in sessions:
+            if not s["running"]:
+                issues.append({"id": f"stopped:{s['name']}", "level": "warn",
+                               "title": f"{s['name']} לא רץ", "detail": "הסשן ברשימה אבל לא פעיל",
+                               "fix": _fix("auto", "הפעל סשנים חסרים", action="resume_missing")})
+            elif s["state"] == "waiting":
+                issues.append({"id": f"waiting:{s['name']}", "level": "warn",
+                               "title": f"{s['name']} מחכה לתשובה",
+                               "detail": "יש בסשן תפריט שמחכה לבחירה שלך",
+                               "fix": _fix("manual", "פתח את הסשן וענה",
+                                           command=f"tmux attach -t {RC_SESSION} \\; select-window -t {s['name']}",
+                                           link=s["link"])})
+            elif s["rc"] == "disconnected":
+                issues.append({"id": f"disconnected:{s['name']}", "level": "warn",
+                               "title": f"{s['name']}: Remote Control מנותק",
+                               "detail": "הסשן רץ אבל לא נראה בטלפון",
+                               "fix": _fix("auto", "הפעל מחדש את הסשן", action="restart_session")})
+        n_run = sum(1 for s in sessions if s["running"])
+        checks.append({"id": "resume_sessions", "title": "סשנים", "level":
+                       "ok" if n_run == len(sessions) else "warn",
+                       "detail": f"{n_run} מתוך {len(sessions)} רצים"})
+        overall = "bad" if any(i["level"] == "bad" for i in issues) else \
+                  "warn" if issues else "ok"
+        v = {"ts": int(time.time()), "overall": overall, "issues": issues, "checks": checks,
+             "sessions": sessions, "daemon": daemon, "network_up": bool(net.get("up"))}
+        _RC_CACHE.update(v=v, ts=time.time())
+        return {**v, "running_action": action_state()}
+
+
+# ── RC logs ──────────────────────────────────────────────────────────────────
+def log_level(msg):
+    m = msg.lower()
+    if re.search(r"error|eror|fail|unreachable|giving up|dead", m):
+        return "bad"
+    if re.search(r"network down|disconnected|warn|skip", m):
+        return "warn"
+    if re.search(r"started|reconnected|connected|\bdone\b|\bready\b", m):
+        return "ok"
+    return "info"
+
+
+def tail_lines(path, n=400, max_bytes=512 * 1024):
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(max(0, size - max_bytes))
+            data = f.read().decode("utf-8", "replace")
+        lines = data.splitlines()
+        if size > max_bytes:
+            lines = lines[1:]           # first line is probably cut
+        return lines[-n:]
+    except Exception:
+        return []
+
+
+def _script_log(path, src, n):
+    out, last = [], ""
+    for l in tail_lines(path, n * 2):
+        m = re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (.*)", l)
+        if m:
+            last = m.group(1)
+            out.append({"ts": last, "src": src, "msg": m.group(2)})
+        elif l.strip():
+            out.append({"ts": last, "src": src, "msg": l.rstrip(), "cont": True})
+    return out
+
+
+def _daemon_log():
+    today = datetime.now().strftime("%Y-%m-%d")
+    out = []
+    for l in rc_daemon_pane()["lines"]:
+        m = re.match(r"\s*\[(\d\d:\d\d:\d\d)\]\s*(.*)", l)
+        out.append({"ts": m.group(1) if m else "", "src": "daemon",
+                    "msg": (m.group(2) if m else l.strip()), "_k": f"{today} {m.group(1)}" if m else ""})
+    return out
+
+
+FORTI_KEEP = re.compile(r"EROR|WARN|Start|Stop|tunnel|DNS|resolve", re.I)
+
+
+def _forti_log(n):
+    out = []
+    for f in ("fctproxy.log", "vpn-provider.log", "epctrl.log"):
+        for l in tail_lines(FORTI_LOGS / f, 600):
+            m = re.match(r"(\d{4})(\d\d)(\d\d) (\d\d:\d\d:\d\d)\.\d+ \S+ \[([^\]]*)\]\s*(.*)", l)
+            if not m or not FORTI_KEEP.search(l):
+                continue
+            msg = f"[{m.group(5)}] {m.group(6)}"
+            out.append({"ts": f"{m.group(1)}-{m.group(2)}-{m.group(3)} {m.group(4)}",
+                        "src": "forti", "msg": msg[:400]})
+    out.sort(key=lambda x: x["ts"])
+    return out[-n:]
+
+
+def rc_logs(src="all", n=200, q=""):
+    n = max(1, min(int(n or 200), 2000))
+    srcs = ["watchdog", "resume", "daemon", "forti"] if src == "all" else [src]
+    lines = []
+    for s in srcs:
+        if s == "watchdog":
+            lines += _script_log(WATCHDOG_LOG, "watchdog", n)
+        elif s == "resume":
+            lines += _script_log(RESUME_LOG, "resume", n)
+        elif s == "daemon":
+            lines += _daemon_log()
+        elif s == "forti":
+            lines += _forti_log(n)
+        else:
+            raise ValueError("unknown src")
+    if len(srcs) > 1:                 # merge by time; untimed lines follow the line above
+        k = ""
+        for l in lines:
+            k = l.get("_k") or (l["ts"] if len(l["ts"]) > 8 else k)
+            l["_k"] = k
+        lines.sort(key=lambda l: l["_k"])
+    for l in lines:
+        l.pop("_k", None)
+        l["level"] = log_level(l["msg"])
+        l.pop("cont", None)
+    if q:
+        ql = q.lower()
+        lines = [l for l in lines if ql in l["msg"].lower()]
+    return {"lines": lines[-n:]}
+
+
+# ── RC actions ───────────────────────────────────────────────────────────────
+def action_state():
+    a = ACTION["state"]
+    if not a:
+        return None
+    if a.get("done") and time.time() - a.get("finished", 0) > 300:
+        return None
+    return a
+
+
+def _step(results, step, ok, detail=""):
+    results.append({"step": step, "ok": bool(ok), "detail": str(detail)[:600]})
+    return ok
+
+
+def _resume_env():
+    env = {**os.environ, "RC_WAIT": "0", "RC_GAP": "3"}
+    if os.environ.get("CC_RC_CONF"):
+        env["RC_MANIFEST"] = str(RC_CONF)
+    if os.environ.get("CC_RC_SESSION"):
+        env["RC_SESSION"] = RC_SESSION
+    if os.environ.get("CC_RC_CMD"):
+        env["RC_CMD"] = os.environ["CC_RC_CMD"]
+    return env
+
+
+def do_resume_missing(results, dry=False):
+    if not RESUME_SH.exists():
+        return _step(results, "resume_missing", False, f"{RESUME_SH} חסר")
+    env = _resume_env()
+    if dry:
+        env["DRY_RUN"] = "1"
+    rc, out = sh(["/bin/zsh", str(RESUME_SH)], timeout=180, env=env)
+    lines = [l for l in out.splitlines() if l.strip()]
+    return _step(results, "resume_missing" + (" (dry)" if dry else ""), rc == 0,
+                 "\n".join(lines[-12:]) or f"exit {rc}")
+
+
+def _find_entry(name, uuid=None):
+    for e in rc_conf_entries():
+        if e["name"] == name and (not uuid or e["uuid"] == uuid):
+            return e
+    return None
+
+
+def do_restart_session(results, name, dry=False):
+    e = _find_entry(name)
+    if not e:
+        return _step(results, f"restart {name}", False, "לא נמצא ברשימת הסשנים")
+    win = rc_window(name)
+    pid = resume_pids(ps_list()).get(e["uuid"])
+    if dry:
+        _step(results, f"exit {name}", True,
+              f"would send /exit to {RC_SESSION}:{name} (pid {pid or '-'}) and wait up to 25s")
+        return _step(results, f"resume {name}", True,
+                     f"would run {RESUME_SH.name} with RC_WAIT=0 RC_GAP=3")
+    if pid:
+        tmux("send-keys", "-t", win, "/exit", "Enter")
+        gone = False
+        for _ in range(25):
+            time.sleep(1)
+            if e["uuid"] not in resume_pids(ps_list()):
+                gone = True
+                break
+            if session_pane_state(pane(win, 60))[3]:
+                tmux("send-keys", "-t", win, "Escape")
+                return _step(results, f"exit {name}", False,
+                             "needs_user: יש עבודת רקע בסשן. לא עצרתי אותה. סגור אותה ידנית ונסה שוב")
+        if not gone:
+            return _step(results, f"exit {name}", False, "הסשן לא נסגר תוך 25 שניות")
+        _step(results, f"exit {name}", True, f"pid {pid} יצא")
+        time.sleep(1)                  # let the shell prompt come back
+    else:
+        _step(results, f"exit {name}", True, "לא רץ, מדלג ליציאה")
+    ok = do_resume_missing(results)
+    for _ in range(10):
+        if e["uuid"] in resume_pids(ps_list()):
+            return _step(results, f"verify {name}", True, "רץ שוב")
+        time.sleep(1)
+    return _step(results, f"verify {name}", False, "התהליך לא עלה תוך 10 שניות") and ok
+
+
+def do_restart_daemon(results, dry=False):
+    if not check_network()["up"]:
+        return _step(results, "restart_daemon", False, "הרשת למטה, לא מפעיל מחדש")
+    d = rc_daemon_proc()
+    if dry:
+        return _step(results, "restart_daemon (dry)", True,
+                     f"would kill pid {d['pid']} and run the watchdog" if d else
+                     "not running: would run the watchdog")
+    if d:
+        try:
+            os.kill(d["pid"], signal.SIGTERM)
+            _step(results, "kill daemon", True, f"pid {d['pid']}")
+        except Exception as ex:
+            return _step(results, "kill daemon", False, ex)
+    if WATCHDOG_SH.exists():
+        subprocess.Popen(["/bin/zsh", str(WATCHDOG_SH)], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+        return _step(results, "watchdog", True, "ה-watchdog יפעיל אותו מחדש (עד ~70 שניות)")
+    return _step(results, "watchdog", False, f"{WATCHDOG_SH} חסר")
+
+
+def fix_all_plan():
+    st = rc_status(force=True)
+    if not st["network_up"]:
+        return st, []
+    autos = {i["fix"]["action"]: True for i in st["issues"] if i["fix"].get("kind") == "auto"}
+    plan = []
+    if autos.get("resume_missing"):
+        plan.append(("resume_missing", None))
+    for i in st["issues"]:
+        if i["fix"].get("action") == "restart_session":
+            plan.append(("restart_session", i["id"].split(":", 1)[1]))
+    if autos.get("restart_daemon"):
+        plan.append(("restart_daemon", None))
+    return st, plan
+
+
+def do_fix_all(results, dry=False):
+    st, plan = fix_all_plan()
+    if not st["network_up"]:
+        return _step(results, "fix_all", False, "הרשת למטה, לא מתקן כלום")
+    if not plan:
+        return _step(results, "fix_all", True, "אין מה לתקן אוטומטית")
+    ok = True
+    for act, name in plan:
+        if act == "resume_missing":
+            ok = (do_resume_missing(results) if not dry else
+                  _step(results, "resume_missing (dry)", True, "would run the resume script")) and ok
+        elif act == "restart_session":
+            ok = do_restart_session(results, name, dry) and ok
+        elif act == "restart_daemon":
+            ok = do_restart_daemon(results, dry) and ok
+    return ok
+
+
+def rc_keep(req, dry=False):
+    name = (req.get("name") or "").strip()
+    uuid = (req.get("uuid") or "").strip().lower()
+    d = os.path.expanduser((req.get("dir") or "").strip() or str(HOME / "c-projects"))
+    if not RC_NAME_RE.fullmatch(name):
+        raise ValueError("שם לא תקין (בלי רווחים או |)")
+    if not UUID_RE.fullmatch(uuid):
+        raise ValueError("מזהה סשן לא תקין")
+    if not os.path.isdir(d) or "|" in d:
+        raise ValueError("תיקייה לא קיימת")
+    for e in rc_conf_entries():
+        if e["name"] == name or e["uuid"] == uuid:
+            raise ValueError(f"כבר ברשימה ({e['name']})")
+    line = f"{name}|{uuid}|{d}"
+    if not dry:
+        txt = RC_CONF.read_text() if RC_CONF.exists() else ""
+        with open(RC_CONF, "a") as f:
+            f.write(("" if not txt or txt.endswith("\n") else "\n") + line + "\n")
+    return line
+
+
+def rc_drop(req, dry=False):
+    name = (req.get("name") or "").strip()
+    if not RC_NAME_RE.fullmatch(name):
+        raise ValueError("שם לא תקין")
+    lines = RC_CONF.read_text().splitlines(keepends=True)
+    stamp = datetime.now().strftime("%Y%m%d")
+    hit = None
+    for i, l in enumerate(lines):
+        s = l.strip()
+        if s and not s.startswith("#") and s.split("|")[0] == name:
+            hit = i
+            break
+    if hit is None:
+        raise ValueError("לא נמצא ברשימה")
+    new = f"# [{stamp}] dropped from dashboard. {lines[hit].rstrip(chr(10))}\n"
+    if not dry:
+        lines[hit] = new
+        RC_CONF.write_text("".join(lines))
+    return new.strip()
+
+
+# ---------------------------------------------------------------------------
+# Session search: find any Claude Code session by title, first message, id,
+# folder or content, see if it runs and where (tmux), and bring it back.
+# ---------------------------------------------------------------------------
+_SEARCH_IDX = {}            # path -> (mtime, size, meta)
+_SEARCH_LOCK = threading.Lock()
+
+
+def _session_meta(p):
+    """title, first user message and folder of one transcript (cached by mtime+size)."""
+    st = p.stat()
+    hit = _SEARCH_IDX.get(str(p))
+    if hit and hit[0] == st.st_mtime and hit[1] == st.st_size:
+        return hit[2]
+    title, first, cwds = None, None, []
+    rc, out = sh(["grep", "-a", "-o", r'"customTitle":"[^"]*"', str(p)], timeout=5)
+    if out.strip():
+        title = json.loads("{" + out.strip().splitlines()[-1] + "}")["customTitle"]
+    try:
+        with open(p, "rb") as f:
+            for i, raw in enumerate(f):
+                if i > 400 or (first and cwds):
+                    break
+                try:
+                    d = json.loads(raw)
+                except ValueError:
+                    continue
+                if d.get("cwd") and d["cwd"] not in cwds:
+                    cwds.append(d["cwd"])
+                if first is None and d.get("type") == "user":
+                    c = (d.get("message") or {}).get("content")
+                    if isinstance(c, list):
+                        c = " ".join(x.get("text", "") for x in c if isinstance(x, dict))
+                    if isinstance(c, str) and c.strip() and not c.lstrip().startswith("<"):
+                        first = " ".join(c.split())[:160]
+    except OSError:
+        pass
+    folder = p.parent.name
+    # resume only works from the folder the transcript is stored under
+    run_dir = next((c for c in cwds if re.sub(r"[/.]", "-", c) == folder), cwds[0] if cwds else None)
+    meta = {"uuid": p.stem, "title": title, "first": first, "dir": run_dir, "folder": folder}
+    _SEARCH_IDX[str(p)] = (st.st_mtime, st.st_size, meta)
+    return meta
+
+
+def _tmux_locations(pids):
+    """pid -> 'session:window' for processes that run inside a tmux pane."""
+    if not pids:
+        return {}
+    rc, out = sh(["tmux", "list-panes", "-a", "-F", "#{pane_pid} #{session_name}:#{window_name}"])
+    panes = dict(l.split(" ", 1) for l in out.splitlines() if " " in l)
+    rc, out = sh(["ps", "-axo", "pid=,ppid="])
+    parent = {}
+    for l in out.split("\n"):
+        a = l.split()
+        if len(a) == 2:
+            parent[a[0]] = a[1]
+    res = {}
+    for pid in pids:
+        cur, hops = str(pid), 0
+        while cur and cur != "1" and hops < 12:
+            if cur in panes:
+                res[pid] = panes[cur]
+                break
+            cur, hops = parent.get(cur), hops + 1
+    return res
+
+
+def session_search(q="", days=14, limit=60, content=False):
+    q = (q or "").strip()
+    days = max(1, min(int(days or 14), 365))
+    limit = max(1, min(int(limit or 60), 300))
+    cutoff = time.time() - days * 86400
+    files = [p for p in PROJECTS.glob("*/*.jsonl") if p.stat().st_mtime >= cutoff and p.stat().st_size > 0]
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    with _SEARCH_LOCK:
+        metas = [(p, _session_meta(p)) for p in files]
+    content_hits = set()
+    if q and content:
+        for i in range(0, len(files), 200):           # grep -F is much faster than parsing JSON
+            rc, out = sh(["grep", "-l", "-i", "-F", "--", q] + [str(p) for p in files[i:i + 200]], timeout=20)
+            content_hits.update(out.split())
+    procs = ps_list()
+    running = resume_pids(procs)
+    locs = _tmux_locations(list(running.values()))
+    cmd_of = {p["pid"]: p["cmd"] for p in procs}
+    for pid in running.values():
+        if pid not in locs and "Application Support/Claude/claude-code" in cmd_of.get(pid, ""):
+            locs[pid] = "Claude Desktop"
+    listed = {e["uuid"]: e["name"] for e in rc_conf_entries()}
+    ql = q.lower()
+    out = []
+    for p, m in metas:
+        hay = " ".join(str(x or "") for x in (m["title"], m["first"], m["uuid"], m["dir"])).lower()
+        if ql and ql not in hay and str(p) not in content_hits:
+            continue
+        pid = running.get(m["uuid"])
+        mtime = p.stat().st_mtime
+        size = p.stat().st_size
+        out.append({**m, "last_activity": mtime, "size": size,
+                    "running": bool(pid), "pid": pid, "where": locs.get(pid),
+                    "in_list": m["uuid"] in listed, "list_name": listed.get(m["uuid"]),
+                    "match": "content" if ql and ql not in hay else ("meta" if ql else None),
+                    # fell: active in the last 24 h, big enough to be real work, not running, not restored
+                    # (idle 10+ min: a session still writing is alive somewhere we cannot see)
+                    "fallen": (not pid and m["uuid"] not in listed and size > 20_000
+                               and 600 < time.time() - mtime < 86400)})
+        if len(out) >= limit:
+            break
+    return {"q": q, "days": days, "scanned": len(files), "results": out}
+
+
+def session_resume(req, dry=False):
+    """Add a found session to the auto-restore list (if needed) and start it."""
+    uuid = (req.get("uuid") or "").strip().lower()
+    if not UUID_RE.fullmatch(uuid):
+        raise ValueError("מזהה סשן לא תקין")
+    hits = list(PROJECTS.glob(f"*/{uuid}.jsonl"))
+    if not hits:
+        raise ValueError("לא נמצא קובץ שיחה לסשן הזה")
+    meta = _session_meta(hits[0])
+    if not meta["dir"] or not os.path.isdir(meta["dir"]):
+        raise ValueError("התיקייה של הסשן לא קיימת יותר")
+    results = []
+    listed = {e["uuid"]: e["name"] for e in rc_conf_entries()}
+    name = listed.get(uuid)
+    if not name:
+        base = (req.get("name") or meta["title"] or "session-" + uuid[:8]).strip()
+        name = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip("-")[:40] or "session-" + uuid[:8]
+        taken = {e["name"] for e in rc_conf_entries()}
+        if name in taken:
+            name = (name[:31] + "-" + uuid[:8])[:40]
+        line = rc_keep({"name": name, "uuid": uuid, "dir": meta["dir"]}, dry=dry)
+        _step(results, "keep", True, line)
+    if uuid in resume_pids(ps_list()):
+        _step(results, "start", True, "כבר רץ")
+    else:
+        do_resume_missing(results, dry=dry)
+    return name, results
+
+
+RC_ACTIONS = ("fix_all", "restart_session", "resume_missing", "restart_daemon", "keep", "drop")
+RC_LABELS = {"fix_all": "תיקון הכול", "restart_session": "הפעלה מחדש של סשן",
+             "resume_missing": "הפעלת סשנים חסרים", "restart_daemon": "הפעלה מחדש של השרת"}
+
+
+def rc_action(req):
+    act = req.get("action")
+    dry = bool(req.get("dry"))
+    if act not in RC_ACTIONS:
+        raise ValueError("פעולה לא מוכרת")
+    results = []
+    if act == "keep":
+        line = rc_keep(req, dry)
+        _step(results, "keep" + (" (dry)" if dry else ""), True, line)
+        _RC_CACHE["ts"] = 0
+        return {"ok": True, "message": ("יתווסף לרשימה" if dry else "נוסף לרשימה"), "results": results}
+    if act == "drop":
+        line = rc_drop(req, dry)
+        _step(results, "drop" + (" (dry)" if dry else ""), True, line)
+        _RC_CACHE["ts"] = 0
+        return {"ok": True, "message": ("יוסר מהרשימה (הסשן עצמו ממשיך לרוץ)" if dry
+                                        else "הוסר מהרשימה. הסשן עצמו ממשיך לרוץ"), "results": results}
+    if act == "restart_session" and not _find_entry(req.get("name") or ""):
+        raise ValueError("סשן לא נמצא ברשימה")
+
+    def body(res):
+        if act == "fix_all":
+            return do_fix_all(res, dry)
+        if act == "restart_session":
+            return do_restart_session(res, req["name"], dry)
+        if act == "resume_missing":
+            return do_resume_missing(res, dry)
+        return do_restart_daemon(res, dry)
+
+    if dry:                            # dry runs are quick (no waits): answer inline
+        ok = body(results)
+        return {"ok": bool(ok), "message": f"תוכנית בלבד: {RC_LABELS[act]}", "results": results,
+                "dry": True}
+    with ACTION_LOCK:
+        cur = ACTION["state"]
+        if cur and not cur.get("done"):
+            return {"ok": False, "message": f"פעולה אחרת רצה: {RC_LABELS.get(cur['action'])}",
+                    "results": []}
+        state_ = {"action": act, "name": req.get("name"), "started": time.time(),
+                  "done": False, "ok": None, "results": []}
+        ACTION["state"] = state_
+
+    def worker():
+        try:
+            ok = body(state_["results"])
+        except Exception as ex:
+            ok = _step(state_["results"], act, False, ex)
+        state_.update(done=True, ok=bool(ok), finished=time.time(),
+                      message=f"{RC_LABELS[act]}: {'הסתיים' if ok else 'נכשל'}")
+        _RC_CACHE["ts"] = 0
+    threading.Thread(target=worker, daemon=True).start()
+    return {"ok": True, "started": True, "message": f"התחיל: {RC_LABELS[act]}", "results": []}
+
+
 # ── static assets ────────────────────────────────────────────────────────────
 # control-sliders icon — deliberately different from Claude's own starburst so
 # the tab reads as "dashboard", not the Claude app itself
@@ -718,6 +1624,25 @@ class H(BaseHTTPRequestHandler):
             self._json(200, monitor())
         elif self.path == "/api/doctor":
             self._json(200, {"checks": doctor()})
+        elif self.path.startswith("/api/rc/status"):
+            self._json(200, rc_status(force="force" in self.path))
+        elif self.path.startswith("/api/sessions/search"):
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(self.path).query)
+            g = lambda k, d: (qs.get(k) or [d])[0]
+            try:
+                self._json(200, session_search(g("q", ""), g("days", 14), g("limit", 60),
+                                               g("content", "0") in ("1", "true")))
+            except ValueError as e:
+                self._json(400, {"error": str(e)})
+        elif self.path.startswith("/api/logs"):
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(self.path).query)
+            try:
+                self._json(200, rc_logs((qs.get("src") or ["all"])[0], (qs.get("n") or [200])[0],
+                                        (qs.get("q") or [""])[0]))
+            except ValueError as e:
+                self._json(400, {"error": str(e)})
         elif self.path.startswith("/api/qr"):
             from urllib.parse import parse_qs, urlparse
             text = (parse_qs(urlparse(self.path).query).get("text") or [""])[0]
@@ -784,6 +1709,22 @@ class H(BaseHTTPRequestHandler):
                 out["path"] = create_file(req)
             elif self.path == "/api/open":
                 open_target(req["what"])
+            elif self.path == "/api/rc/action":
+                try:
+                    return self._json(200, rc_action(req))
+                except ValueError as e:      # validation: same shape, ok false
+                    return self._json(200, {"ok": False, "message": str(e), "error": str(e),
+                                            "results": []})
+            elif self.path == "/api/sessions/resume":
+                try:
+                    name, results = session_resume(req, dry=bool(req.get("dry")))
+                    ok = all(r["ok"] for r in results)
+                    msg = (f"תוכנית בלבד: {name}" if req.get("dry") else
+                           f"{name} הופעל ונוסף לשחזור האוטומטי" if ok else f"{name}: חלק מהשלבים נכשלו")
+                    return self._json(200, {"ok": ok, "name": name, "message": msg, "results": results,
+                                            "dry": bool(req.get("dry"))})
+                except ValueError as e:
+                    return self._json(200, {"ok": False, "message": str(e), "error": str(e), "results": []})
             elif self.path == "/api/shutdown":
                 self._json(200, {"ok": True, "bye": True})
                 threading.Thread(target=H.server_ref.shutdown, daemon=True).start()
@@ -826,12 +1767,14 @@ if __name__ == "__main__":
     url = f"http://127.0.0.1:{PORT}"
     if port_in_use():
         print(f"Claude Control already running · {url} — opening browser")
-        webbrowser.open(url)
+        if not os.environ.get("CC_NO_BROWSER"):
+            webbrowser.open(url)
         raise SystemExit(0)
-    srv = HTTPServer(("127.0.0.1", PORT), H)
+    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     H.server_ref = srv
     print(f"Claude Control · {url}  (Ctrl-C or the ⏻ button to stop)")
-    threading.Timer(0.4, lambda: webbrowser.open(url)).start()
+    if not os.environ.get("CC_NO_BROWSER"):            # CC_NO_BROWSER=1: dev/headless run
+        threading.Timer(0.4, lambda: webbrowser.open(url)).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
