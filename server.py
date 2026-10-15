@@ -646,7 +646,8 @@ def doctor():
     return out
 
 
-ALIAS_LINE = "alias cl-dash='python3 ~/.claude/dashboard/server.py'"
+# cl-dash opens the dashboard and starts it through launchd when needed (never a second server)
+ALIAS_LINE = "alias cl-dash='~/.claude/dashboard/cl-dash'"
 
 
 def alias_installed():
@@ -754,8 +755,17 @@ LOGS_DIR = HOME / "Library" / "Logs"
 WATCHDOG_LOG = LOGS_DIR / "claude-rc-watchdog.log"
 RESUME_LOG = LOGS_DIR / "claude-rc-resume.log"
 FORTI_LOGS = Path("/Library/Application Support/Fortinet/FortiClient/Logs")
-LAUNCH_AGENTS = {"watchdog": "com.daniel.claude-rc-watchdog",
-                 "resume": "com.daniel.claude-rc-resume"}
+def _agent_label(suffix):
+    """launchd label of a user agent named '<anything>.<suffix>' (labels differ per user)."""
+    env = os.environ.get("CC_LABEL_" + suffix.replace("-", "_").upper())
+    if env:
+        return env
+    hits = sorted((HOME / "Library" / "LaunchAgents").glob(f"*.{suffix}.plist"))
+    return hits[0].stem if hits else f"local.{suffix}"
+
+
+LAUNCH_AGENTS = {"watchdog": _agent_label("claude-rc-watchdog"),
+                 "resume": _agent_label("claude-rc-resume")}
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 RC_NAME_RE = re.compile(r"[A-Za-z0-9._-]{1,40}")
 QR_CHARS = re.compile(r"[█▀▄]")
