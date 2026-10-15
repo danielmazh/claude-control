@@ -7,8 +7,8 @@ from the machine it runs on.
 
 ## Pages
 
-- **Home** - one health bar (network, Claude login, Remote Control daemon, watchdog,
-  restore, sessions) with a "fix everything" button, and cards to every page.
+- **Home** - one health bar (network, VPN, Claude login, Remote Control daemon,
+  watchdog, restore, sessions) with a "fix everything" button, and cards to every page.
 - **Sessions and Restore** - every session in your auto-restore list with its state,
   phone (Remote Control) state and last activity. One-click actions: reconnect, start,
   open on phone, copy the tmux attach command, add, remove. System checks with an
@@ -24,9 +24,11 @@ from the machine it runs on.
 - **New session** - generic presets and your own, each with an estimated start token
   cost, plus a custom builder (MCP profiles, skills, rule packs, folder, model). Opens
   in a tmux window of your choice or a new Terminal window. "Work from phone" reuses
-  the running Remote Control daemon and shows its link and QR code.
+  the running Remote Control daemon and shows its link and QR code, or a QR code with
+  an `ssh ... tmux attach` command for a phone SSH app.
 - **Manage** - account, update, diagnostics (`claude doctor`), model, plugins, sounds,
-  `CLAUDE.md`, MCP profiles, hooks, rules, skills, Claude Desktop config.
+  `CLAUDE.md`, MCP profiles (add a server), hooks, rules, skills (create, activate,
+  archive), new files, Claude Desktop config, and a one-click `cl-dash` alias install.
 - **Monitor** - quota bars, a 7-day chart and a project x model breakdown, built only
   from Claude Code's own records.
 - **Guide** - what each part does.
@@ -65,7 +67,9 @@ a watchdog that keeps `claude remote-control` alive in tmux session
 `claude-RC-general` (window `rc-daemon`), and a resume script that restarts the
 sessions listed in `~/.config/claude-rc/sessions.conf` (`name|session-id|folder`) in
 tmux session `rc-resume`. Their launchd labels are found by suffix
-(`*.claude-rc-watchdog`, `*.claude-rc-resume`).
+(`*.claude-rc-watchdog`, `*.claude-rc-resume`). The daemon log tab and the daemon's
+phone link read `~/Library/Logs/claude-rc-daemon.log`, which the watchdog fills with
+`tmux pipe-pane`.
 
 ## Settings (environment)
 
@@ -75,6 +79,10 @@ tmux session `rc-resume`. Their launchd labels are found by suffix
 | `CC_DATA` | the script folder | Where state files live (presets, config, caches). |
 | `CC_NO_BROWSER` | unset | `1` = do not open a browser on start. |
 | `CC_LABEL` | `local.claude-control` | launchd label used by `install.sh` for a new agent. |
+| `CC_LABEL_CLAUDE_RC_WATCHDOG`, `CC_LABEL_CLAUDE_RC_RESUME` | found by suffix | launchd labels of the restore scripts, if the suffix search does not fit. |
+| `CC_RC_CONF` | `~/.config/claude-rc/sessions.conf` | Restore list. |
+| `CC_RC_SESSION` | `rc-resume` | tmux session of the restored sessions. |
+| `CC_RC_CMD` | `ANTHROPIC_BASE_URL= claude` | Command used to resume a session (for tests). |
 
 Development copy next to the live one:
 
@@ -92,12 +100,20 @@ deleted). `install.sh` also writes the launchd plist and one alias line in `~/.z
 
 ## API
 
-Read: `GET /api/state`, `/api/monitor`, `/api/doctor`, `/api/rc/status`,
-`/api/logs?src=all|watchdog|resume|daemon|forti&q=`,
-`/api/sessions/search?q=&days=&content=1`.
-Actions (POST, all support `"dry": true`): `/api/rc/action`
-(`fix_all`, `restart_session`, `resume_missing`, `restart_daemon`, `keep`, `drop`),
-`/api/sessions/resume`.
+Read (GET): `/api/state`, `/api/monitor` (`?force` rebuilds the cache), `/api/doctor`,
+`/api/rc/status`, `/api/logs?src=all|watchdog|resume|daemon|forti&n=&q=`,
+`/api/sessions/search?q=&days=&limit=&content=1`, `/api/qr?text=`.
+
+Restore and search actions (POST, with `"dry": true` for a plan only):
+`/api/rc/action` (`fix_all`, `restart_session`, `resume_missing`, `restart_daemon`,
+`keep`, `drop`), `/api/sessions/resume`, and `/api/launch` (dry shows the command).
+
+Other POST actions used by the pages: `/api/model`, `/api/plugin`, `/api/sounds`,
+`/api/skill`, `/api/skill/create`, `/api/preset`, `/api/preset/delete`, `/api/rule`,
+`/api/rule/get`, `/api/rule/delete`, `/api/claude-md/get`, `/api/claude-md/save`,
+`/api/config`, `/api/login`, `/api/install-alias`, `/api/update`,
+`/api/remote-control`, `/api/mcp-server/add`, `/api/file/create`, `/api/open`,
+`/api/shutdown`.
 
 ## Sharing this tool
 
