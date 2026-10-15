@@ -50,6 +50,23 @@ DESKTOP_CFG = HOME / "Library" / "Application Support" / "Claude" / "claude_desk
 PROJECTS = CL / "projects"
 PORT = int(os.environ.get("CC_PORT") or 7799)
 
+# ── language: messages, check titles and issue texts in Hebrew (default) or English.
+# A request sets it with ?lang=en or a JSON field "lang"; it is kept per thread, so
+# a background action thread sets its own copy.
+_LANG = threading.local()
+
+
+def set_lang(lang):
+    _LANG.v = "en" if str(lang or "").lower().startswith("en") else "he"
+
+
+def cur_lang():
+    return getattr(_LANG, "v", "he")
+
+
+def tr(he, en):
+    return en if cur_lang() == "en" else he
+
 CLT_FULL = ("Bash,Read,Edit,Write,TaskCreate,TaskUpdate,TaskStop,TaskOutput,"
             "WebFetch,WebSearch,Agent,AskUserQuestion,Skill")
 CLT_NOSKILL = CLT_FULL.replace(",Skill", "")
@@ -60,17 +77,33 @@ MODELS = ("opus", "opus[1m]", "sonnet", "sonnet[1m]", "haiku", "fable")
 BUILTIN_PRESETS = [
     {"id": "bare",  "kind": "generic", "name": "נקי לגמרי",
      "desc": "בלי סקילים, בלי MCP, בלי sub-agents — מינימום מוחלט",
+     "name_en": "Completely clean",
+     "desc_en": "No skills, no MCP, no sub-agents - the absolute minimum",
      "profiles": [], "skills": False, "bare": True},
     {"id": "cl",    "kind": "generic", "name": "קלאסי + סקילים",
      "desc": "רזה עם כל הסקילים — ברירת מחדל יומיומית",
+     "name_en": "Classic + skills",
+     "desc_en": "Lean, with all skills - the everyday default",
      "profiles": [], "skills": True, "bare": False},
     {"id": "mcp",   "kind": "generic", "name": "קלאסי + MCP מקומי",
      "desc": "סקילים + כל פרופילי ה-MCP המקומיים",
+     "name_en": "Classic + local MCP",
+     "desc_en": "Skills + all local MCP profiles",
      "profiles": ["all-local.json"], "skills": True, "bare": False},
     {"id": "full",  "kind": "generic", "name": "הכול",
      "desc": "פלאגינים + ‎.mcp.json של הפרויקט — כמו claude רגיל",
+     "name_en": "Everything",
+     "desc_en": "Plugins + the project .mcp.json - like plain claude",
      "profiles": None, "skills": True, "bare": False},
 ]
+
+
+def builtin_preset(p):
+    """A built-in preset with name and desc in the request language."""
+    out = {k: v for k, v in p.items() if not k.endswith("_en")}
+    if cur_lang() == "en":
+        out["name"], out["desc"] = p["name_en"], p["desc_en"]
+    return out
 
 # rough per-server preload estimates (K tokens) for the session-start badge;
 # unknown servers fall back to 5k. Deferred tool loading may lower real cost.
@@ -97,6 +130,12 @@ def dash_config():
     return {"code_dir": "", **jread(DASH_CONFIG, {})}
 
 
+def default_dir():
+    """Fallback folder for sessions: config.json code_dir if it exists, else HOME."""
+    cd = os.path.expanduser(dash_config().get("code_dir") or "")
+    return cd if cd and os.path.isdir(cd) else str(HOME)
+
+
 def repos():
     """Sub-directories of the configured code directory — used as cwd choices."""
     cd = os.path.expanduser(dash_config().get("code_dir") or "")
@@ -118,8 +157,10 @@ def user_presets():
 
 
 def all_presets():
-    out = [{**p, "custom": False, "cmd": build_cmd(p), "est": estimate(p)}
-           for p in BUILTIN_PRESETS]
+    # a built-in preset that names a missing MCP profile would fail to start: hide it
+    out = [{**builtin_preset(p), "custom": False, "cmd": build_cmd(p), "est": estimate(p)}
+           for p in BUILTIN_PRESETS
+           if not p["profiles"] or all((MCP_DIR / x).exists() for x in p["profiles"])]
     out += [{**p, "kind": "custom", "custom": True, "cmd": build_cmd(p), "est": estimate(p)}
             for p in user_presets()]
     return out
@@ -128,10 +169,10 @@ def all_presets():
 def save_user_preset(p):
     name = (p.get("name") or "").strip()
     if not SAFE_NAME.fullmatch(name):
-        raise ValueError("שם לא תקין")
+        raise ValueError(tr("שם לא תקין", "Invalid name"))
     cwd = (p.get("cwd") or "").strip()
     if cwd and not SAFE_PATH.fullmatch(cwd):
-        raise ValueError("נתיב לא תקין")
+        raise ValueError(tr("נתיב לא תקין", "Invalid path"))
     entry = {"id": p.get("id") or f"u{int(time.time())}", "name": name,
              "desc": (p.get("desc") or "").strip()[:80],
              "profiles": [x for x in p.get("profiles", [])
@@ -154,7 +195,13 @@ def build_cmd(p):
         cmd = "claude"
     else:
         tools = CLT_BARE if p.get("bare") else (CLT_FULL if p.get("skills", True) else CLT_NOSKILL)
-        cfgs = " ".join(f"~/.claude/registry/mcp/{x}" for x in (p.get("profiles") or ["none.json"]))
+        profs = p.get("profiles") or []
+        if profs:
+            cfgs = " ".join(f"~/.claude/registry/mcp/{x}" for x in profs)
+        elif (MCP_DIR / "none.json").exists():
+            cfgs = "~/.claude/registry/mcp/none.json"
+        else:                          # no MCP registry on this machine: an empty inline config
+            cfgs = """'{"mcpServers":{}}'"""
         cmd = f'claude --strict-mcp-config --mcp-config {cfgs} --tools "{tools}"'
         if p.get("bare"):
             cmd += ' --agents "{}"'
@@ -203,7 +250,7 @@ def rules_list():
 def rule_save(name, content, old=None):
     slug = re.sub(r"[^A-Za-z0-9א-ת_-]+", "-", name.strip()).strip("-")[:40]
     if not slug:
-        raise ValueError("שם לא תקין")
+        raise ValueError(tr("שם לא תקין", "Invalid name"))
     RULES_DIR.mkdir(exist_ok=True)
     fname = old if (old and SAFE_FILE.fullmatch(old)) else f"{slug}.md"
     (RULES_DIR / fname).write_text(content)
@@ -260,18 +307,18 @@ def launch(preset, target, dry=False):
     cmd = build_cmd(preset)
     cwd = os.path.expanduser(preset.get("cwd") or "")
     if cwd and not os.path.isdir(cwd):
-        raise ValueError(f"תיקייה לא קיימת: {cwd}")
+        raise ValueError(tr(f"תיקייה לא קיימת: {cwd}", f"Folder does not exist: {cwd}"))
     base = re.sub(r"[^A-Za-z0-9-]", "", preset.get("id", "cl")) or "cl"
     if target.get("type") == "tmux":
         if shutil.which("tmux") is None:
-            raise ValueError("tmux לא מותקן — ראה טאב הוראות")
+            raise ValueError(tr("tmux לא מותקן — ראה טאב הוראות", "tmux is not installed - see the Guide page"))
         ses = target.get("session", "")
         if ses == "__new__":
             ses = "claude"
             if not any(s["name"] == ses for s in tmux_sessions()) and not dry:
                 tmux("new-session", "-d", "-s", ses, "-c", cwd or str(HOME))
         elif ses not in [s["name"] for s in tmux_sessions()]:
-            raise ValueError("סשן tmux לא קיים")
+            raise ValueError(tr("סשן tmux לא קיים", "The tmux session does not exist"))
         win = next_window_name(ses, base) if not dry else f"{base}-XX"
         if not dry:
             tmux("new-window", "-t", f"{ses}:", "-n", win, "-c", cwd or str(HOME))
@@ -422,14 +469,14 @@ def remote_control(target):
     cmd = "claude remote-control"
     if target.get("type") == "tmux":
         if shutil.which("tmux") is None:
-            raise ValueError("tmux לא מותקן — ראה טאב הוראות")
+            raise ValueError(tr("tmux לא מותקן — ראה טאב הוראות", "tmux is not installed - see the Guide page"))
         ses = target.get("session", "")
         if ses == "__new__":
             ses = "claude"
             if not any(s["name"] == ses for s in tmux_sessions()):
                 tmux("new-session", "-d", "-s", ses)
         elif ses not in [s["name"] for s in tmux_sessions()]:
-            raise ValueError("סשן tmux לא קיים")
+            raise ValueError(tr("סשן tmux לא קיים", "The tmux session does not exist"))
         win = next_window_name(ses, "rc")
         tmux("new-window", "-t", f"{ses}:", "-n", win)
         tmux("send-keys", "-t", f"{ses}:{win}", cmd, "C-m")
@@ -543,6 +590,8 @@ def state():
         "claude_md": {"exists": CLAUDE_MD.exists(),
                       "tokens": round(CLAUDE_MD.stat().st_size / 4 / 1000, 1) if CLAUDE_MD.exists() else 0},
         "limits": usage_limits(),
+        "features": features(),
+        "lang": cur_lang(),
     }
 
 
@@ -747,25 +796,98 @@ def monitor():
 # env overrides exist only so a test can point actions at a throwaway tmux session.
 RC_CONF = Path(os.environ.get("CC_RC_CONF") or HOME / ".config" / "claude-rc" / "sessions.conf")
 RC_SESSION = os.environ.get("CC_RC_SESSION") or "rc-resume"
-RC_DAEMON_TARGET = "claude-RC-general:rc-daemon"
-RC_DAEMON_LOG = HOME / "Library" / "Logs" / "claude-rc-daemon.log"   # written by tmux pipe-pane in the watchdog
-RESUME_SH = HOME / ".local" / "bin" / "claude-rc-resume.sh"
-WATCHDOG_SH = HOME / ".local" / "bin" / "claude-rc-watchdog.sh"
+RC_DAEMON_TARGET = os.environ.get("CC_RC_DAEMON_TARGET") or "claude-RC-general:rc-daemon"
 LOGS_DIR = HOME / "Library" / "Logs"
+RC_DAEMON_LOG = LOGS_DIR / "claude-rc-daemon.log"   # written by tmux pipe-pane in the watchdog
+BIN_DIR = Path(os.environ.get("CC_BIN_DIR") or HOME / ".local" / "bin").expanduser()
 WATCHDOG_LOG = LOGS_DIR / "claude-rc-watchdog.log"
 RESUME_LOG = LOGS_DIR / "claude-rc-resume.log"
+LAUNCH_AGENTS_DIR = HOME / "Library" / "LaunchAgents"
+FORTI_APP = Path("/Applications/FortiClient.app")
 FORTI_LOGS = Path("/Library/Application Support/Fortinet/FortiClient/Logs")
+
+
+def _agent_plist(suffix):
+    hits = sorted(LAUNCH_AGENTS_DIR.glob(f"*.{suffix}.plist"))
+    return hits[0] if hits else None
+
+
 def _agent_label(suffix):
     """launchd label of a user agent named '<anything>.<suffix>' (labels differ per user)."""
     env = os.environ.get("CC_LABEL_" + suffix.replace("-", "_").upper())
     if env:
         return env
-    hits = sorted((HOME / "Library" / "LaunchAgents").glob(f"*.{suffix}.plist"))
-    return hits[0].stem if hits else f"local.{suffix}"
+    hit = _agent_plist(suffix)
+    return hit.stem if hit else f"{os.environ.get('CC_LABEL_PREFIX') or 'local'}.{suffix}"
 
 
-LAUNCH_AGENTS = {"watchdog": _agent_label("claude-rc-watchdog"),
-                 "resume": _agent_label("claude-rc-resume")}
+def launch_agents():
+    # read live: install.sh --with-restore may add the agents while the server runs
+    return {"watchdog": _agent_label("claude-rc-watchdog"),
+            "resume": _agent_label("claude-rc-resume")}
+
+
+def _script(name):
+    """Restore script path: the one the launchd agent runs, else CC_BIN_DIR/<name>."""
+    plist = _agent_plist(name.replace(".sh", ""))
+    if plist:
+        try:
+            import plistlib
+            with open(plist, "rb") as f:
+                for a in plistlib.load(f).get("ProgramArguments") or []:
+                    if str(a).endswith("/" + name):
+                        return Path(a).expanduser()
+        except Exception:
+            pass
+    return BIN_DIR / name
+
+
+class _ScriptPath:
+    """Path-like lookup that is resolved on each use (agents can change at runtime)."""
+    def __init__(self, name):
+        self.name = name
+
+    def path(self):
+        return _script(self.name)
+
+    def exists(self):
+        return self.path().exists()
+
+    def __str__(self):
+        return str(self.path())
+
+    __fspath__ = __str__
+
+
+RESUME_SH = _ScriptPath("claude-rc-resume.sh")
+WATCHDOG_SH = _ScriptPath("claude-rc-watchdog.sh")
+
+
+def features():
+    """What this machine has. The pages hide the parts that do not apply.
+    CC_FEATURE_<NAME>=0|1 (for example CC_FEATURE_FORTICLIENT=0) overrides one detection."""
+    found = {
+        "restore": RC_CONF.exists() or _agent_plist("claude-rc-resume") is not None,
+        "watchdog": WATCHDOG_SH.exists() or _agent_plist("claude-rc-watchdog") is not None,
+        "forticlient": FORTI_APP.exists() or FORTI_LOGS.exists(),
+        "mcp_registry": MCP_DIR.is_dir(),
+        # the quota bars read the status-line cache, else Claude's own cached copy
+        "rate_limits": RATE_LIMITS.exists() or bool(
+            (jread(CLAUDE_JSON).get("cachedUsageUtilization") or {}).get("utilization")),
+    }
+    for k in found:
+        v = os.environ.get("CC_FEATURE_" + k.upper())
+        if v in ("0", "1"):
+            found[k] = v == "1"
+    return found
+
+
+def forti_on():
+    return features()["forticlient"]
+
+
+RESTORE_MISSING = ("שחזור הסשנים לא מוגדר. התקן אותו עם ‎./install.sh --with-restore",
+                   "Session restore is not set up. Install it with ./install.sh --with-restore")
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 RC_NAME_RE = re.compile(r"[A-Za-z0-9._-]{1,40}")
 QR_CHARS = re.compile(r"[█▀▄]")
@@ -800,7 +922,7 @@ def rc_conf_entries():
             parts = line.split("|")
             if len(parts) >= 2 and parts[0] and parts[1]:
                 out.append({"name": parts[0], "uuid": parts[1],
-                            "dir": parts[2] if len(parts) > 2 and parts[2] else str(HOME / "c-projects")})
+                            "dir": parts[2] if len(parts) > 2 and parts[2] else default_dir()})
     except Exception:
         pass
     return out
@@ -983,18 +1105,25 @@ def _fix(kind, label, action=None, command=None, link=None):
 
 ACTION = {"state": None}          # the running / last background action
 ACTION_LOCK = threading.Lock()
-_RC_CACHE = {"v": None, "ts": 0}
+_RC_CACHE = {}                    # lang -> (status, time)
 _RC_LOCK = threading.Lock()
 
 
 def rc_status(force=False):
+    lang = cur_lang()
     with _RC_LOCK:
-        if not force and _RC_CACHE["v"] and time.time() - _RC_CACHE["ts"] < 3:
-            return {**_RC_CACHE["v"], "running_action": action_state()}
+        hit = _RC_CACHE.get(lang)
+        if not force and hit and time.time() - hit[1] < 3:
+            return {**hit[0], "running_action": action_state()}
+        feats = features()
+        restore = feats["restore"]
+        agents = launch_agents()
         res = {}
-        jobs = {"network": check_network, "vpn": check_vpn, "auth": check_auth,
-                "procs": ps_list,
-                **{k: (lambda l=l: check_launchd(l)) for k, l in LAUNCH_AGENTS.items()}}
+        jobs = {"network": check_network, "auth": check_auth, "procs": ps_list}
+        if feats["forticlient"]:
+            jobs["vpn"] = check_vpn
+        if restore:
+            jobs.update({k: (lambda l=l: check_launchd(l)) for k, l in agents.items()})
 
         def run(k, fn):
             try:
@@ -1011,9 +1140,9 @@ def rc_status(force=False):
         vpn = res.get("vpn") or {"present": False, "connected": False}
         auth = res.get("auth") or {"ok": False, "loggedIn": False}
         procs = res.get("procs") or []
-        sessions = rc_sessions(procs)
+        sessions = rc_sessions(procs) if restore else []
         dproc = rc_daemon_proc(procs)
-        dpane = rc_daemon_pane()
+        dpane = rc_daemon_pane() if (restore or dproc) else {"status": "", "env_link": None, "last_events": []}
         daemon = {"running": bool(dproc), "pid": dproc["pid"] if dproc else None,
                   "started": dproc["started"] if dproc else None,
                   "status": dpane["status"] if dproc else "",
@@ -1022,87 +1151,122 @@ def rc_status(force=False):
         checks, issues = [], []
         # network
         if net.get("up"):
-            checks.append({"id": "network", "title": "רשת", "level": "warn" if net["ms"] > 3000 else "ok",
-                           "detail": f"api.anthropic.com עונה ({net['ms']}ms)"})
+            checks.append({"id": "network", "title": tr("רשת", "Network"),
+                           "level": "warn" if net["ms"] > 3000 else "ok",
+                           "detail": tr(f"api.anthropic.com עונה ({net['ms']}ms)",
+                                        f"api.anthropic.com answers ({net['ms']}ms)")})
         else:
-            detail = "api.anthropic.com לא עונה."
+            detail = tr("api.anthropic.com לא עונה.", "api.anthropic.com does not answer.")
             if vpn.get("connected"):
-                detail += " ה-VPN של FortiClient מחובר, ייתכן שהוא הגורם."
-            checks.append({"id": "network", "title": "רשת", "level": "bad", "detail": detail})
-            issues.append({"id": "network", "level": "bad", "title": "אין חיבור ל-Anthropic",
+                detail += tr(" ה-VPN של FortiClient מחובר, ייתכן שהוא הגורם.",
+                             " The FortiClient VPN is connected, it may be the cause.")
+            checks.append({"id": "network", "title": tr("רשת", "Network"), "level": "bad", "detail": detail})
+            issues.append({"id": "network", "level": "bad",
+                           "title": tr("אין חיבור ל-Anthropic", "No connection to Anthropic"),
                            "detail": detail,
-                           "fix": _fix("manual", "בדוק VPN או Wi-Fi" +
-                                       (" (נסה לנתק את FortiClient)" if vpn.get("connected") else ""))})
-        # vpn
-        if vpn.get("present"):
-            checks.append({"id": "vpn", "title": "VPN (FortiClient)", "level": "ok",
-                           "detail": "מחובר" if vpn.get("connected") else "מנותק"})
-        else:
-            checks.append({"id": "vpn", "title": "VPN", "level": "ok", "detail": "לא מוגדר"})
+                           "fix": _fix("manual", tr("בדוק VPN או Wi-Fi", "Check the VPN or Wi-Fi") +
+                                       (tr(" (נסה לנתק את FortiClient)", " (try to disconnect FortiClient)")
+                                        if vpn.get("connected") else ""))})
+        # vpn: only on a machine with FortiClient
+        if feats["forticlient"]:
+            if vpn.get("present"):
+                checks.append({"id": "vpn", "title": "VPN (FortiClient)", "level": "ok",
+                               "detail": tr("מחובר", "connected") if vpn.get("connected")
+                               else tr("מנותק", "disconnected")})
+            else:
+                checks.append({"id": "vpn", "title": "VPN", "level": "ok",
+                               "detail": tr("לא מוגדר", "not set up")})
         # auth
         if auth.get("loggedIn"):
-            checks.append({"id": "auth", "title": "התחברות", "level": "ok",
-                           "detail": f"מחובר ({auth.get('subscriptionType') or '?'})"})
+            checks.append({"id": "auth", "title": tr("התחברות", "Sign-in"), "level": "ok",
+                           "detail": tr(f"מחובר ({auth.get('subscriptionType') or '?'})",
+                                        f"signed in ({auth.get('subscriptionType') or '?'})")})
         else:
-            d = "לא מחובר לחשבון Claude" if auth.get("ok") else "לא ניתן לבדוק התחברות"
-            fx = _fix("manual", "התחבר מחדש בטרמינל", command="claude auth login")
-            checks.append({"id": "auth", "title": "התחברות", "level": "bad", "detail": d, "action": fx})
-            issues.append({"id": "auth", "level": "bad", "title": "לא מחובר ל-Claude",
+            d = tr("לא מחובר לחשבון Claude", "Not signed in to a Claude account") if auth.get("ok") \
+                else tr("לא ניתן לבדוק התחברות", "Cannot check the sign-in")
+            fx = _fix("manual", tr("התחבר מחדש בטרמינל", "Sign in again in a terminal"),
+                      command="claude auth login")
+            checks.append({"id": "auth", "title": tr("התחברות", "Sign-in"), "level": "bad",
+                           "detail": d, "action": fx})
+            issues.append({"id": "auth", "level": "bad",
+                           "title": tr("לא מחובר ל-Claude", "Not signed in to Claude"),
                            "detail": d, "fix": fx})
-        # daemon
-        if dproc:
-            checks.append({"id": "daemon", "title": "שרת Remote Control", "level":
-                           "warn" if daemon["status"] == "Error" else "ok",
-                           "detail": f"רץ (pid {dproc['pid']}) {daemon['status']}".strip()})
+        if not restore:
+            # restore is optional: one info line with the setup command, no agent issues
+            checks.append({"id": "restore_setup", "title": tr("שחזור סשנים", "Session restore"),
+                           "level": "info",
+                           "detail": tr("לא מוגדר. התקנה: ‎./install.sh --with-restore",
+                                        "Not set up. Install: ./install.sh --with-restore"),
+                           "action": _fix("manual", tr("העתק פקודת התקנה", "Copy the install command"),
+                                          command="./install.sh --with-restore")})
         else:
-            fx = _fix("auto", "הפעל מחדש", action="restart_daemon") if net.get("up") else \
-                _fix("manual", "יופעל מחדש כשהרשת תחזור")
-            checks.append({"id": "daemon", "title": "שרת Remote Control", "level": "warn",
-                           "detail": "לא רץ", "action": fx})
-            issues.append({"id": "daemon", "level": "warn", "title": "שרת Remote Control לא רץ",
-                           "detail": "הטלפון לא יראה סשנים חדשים", "fix": fx})
-        # launchd agents
-        for key, title in (("watchdog", "Watchdog"), ("resume", "שחזור סשנים")):
-            ld = res.get(key) or {"loaded": False}
-            label = LAUNCH_AGENTS[key]
-            cmd = f"launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{label}.plist"
-            bad_exit = ld.get("last_exit") not in (None, 0)
-            if ld.get("loaded") and not bad_exit:
-                checks.append({"id": key, "title": title, "level": "ok",
-                               "detail": f"טעון, {ld.get('runs', 0)} הרצות, יציאה אחרונה 0"})
+            # daemon
+            if dproc:
+                checks.append({"id": "daemon", "title": tr("שרת Remote Control", "Remote Control server"),
+                               "level": "warn" if daemon["status"] == "Error" else "ok",
+                               "detail": tr(f"רץ (pid {dproc['pid']}) {daemon['status']}",
+                                            f"running (pid {dproc['pid']}) {daemon['status']}").strip()})
             else:
-                d = "לא טעון ב-launchd" if not ld.get("loaded") else f"יציאה אחרונה {ld.get('last_exit')}"
-                fx = _fix("manual", "טען מחדש את הסוכן", command=cmd)
-                checks.append({"id": key, "title": title, "level": "warn", "detail": d, "action": fx})
-                issues.append({"id": key, "level": "warn", "title": f"{title}: {d}", "detail": label,
+                fx = _fix("auto", tr("הפעל מחדש", "Restart"), action="restart_daemon") if net.get("up") else \
+                    _fix("manual", tr("יופעל מחדש כשהרשת תחזור", "Restarts when the network is back"))
+                checks.append({"id": "daemon", "title": tr("שרת Remote Control", "Remote Control server"),
+                               "level": "warn", "detail": tr("לא רץ", "not running"), "action": fx})
+                issues.append({"id": "daemon", "level": "warn",
+                               "title": tr("שרת Remote Control לא רץ", "The Remote Control server is not running"),
+                               "detail": tr("הטלפון לא יראה סשנים חדשים", "The phone will not see new sessions"),
                                "fix": fx})
-        # sessions
-        for s in sessions:
-            if not s["running"]:
-                issues.append({"id": f"stopped:{s['name']}", "level": "warn",
-                               "title": f"{s['name']} לא רץ", "detail": "הסשן ברשימה אבל לא פעיל",
-                               "fix": _fix("auto", "הפעל סשנים חסרים", action="resume_missing")})
-            elif s["state"] == "waiting":
-                issues.append({"id": f"waiting:{s['name']}", "level": "warn",
-                               "title": f"{s['name']} מחכה לתשובה",
-                               "detail": "יש בסשן תפריט שמחכה לבחירה שלך",
-                               "fix": _fix("manual", "פתח את הסשן וענה",
-                                           command=f"tmux attach -t {RC_SESSION} \\; select-window -t {s['name']}",
-                                           link=s["link"])})
-            elif s["rc"] == "disconnected":
-                issues.append({"id": f"disconnected:{s['name']}", "level": "warn",
-                               "title": f"{s['name']}: Remote Control מנותק",
-                               "detail": "הסשן רץ אבל לא נראה בטלפון",
-                               "fix": _fix("auto", "הפעל מחדש את הסשן", action="restart_session")})
-        n_run = sum(1 for s in sessions if s["running"])
-        checks.append({"id": "resume_sessions", "title": "סשנים", "level":
-                       "ok" if n_run == len(sessions) else "warn",
-                       "detail": f"{n_run} מתוך {len(sessions)} רצים"})
+            # launchd agents
+            for key, title in (("watchdog", "Watchdog"), ("resume", tr("שחזור סשנים", "Session restore"))):
+                ld = res.get(key) or {"loaded": False}
+                label = agents[key]
+                cmd = f"launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{label}.plist"
+                bad_exit = ld.get("last_exit") not in (None, 0)
+                if ld.get("loaded") and not bad_exit:
+                    checks.append({"id": key, "title": title, "level": "ok",
+                                   "detail": tr(f"טעון, {ld.get('runs', 0)} הרצות, יציאה אחרונה 0",
+                                                f"loaded, {ld.get('runs', 0)} runs, last exit 0")})
+                else:
+                    d = tr("לא טעון ב-launchd", "not loaded in launchd") if not ld.get("loaded") \
+                        else tr(f"יציאה אחרונה {ld.get('last_exit')}", f"last exit {ld.get('last_exit')}")
+                    fx = _fix("manual", tr("טען מחדש את הסוכן", "Load the agent again"), command=cmd)
+                    checks.append({"id": key, "title": title, "level": "warn", "detail": d, "action": fx})
+                    issues.append({"id": key, "level": "warn", "title": f"{title}: {d}", "detail": label,
+                                   "fix": fx})
+            # sessions
+            for s in sessions:
+                if not s["running"]:
+                    issues.append({"id": f"stopped:{s['name']}", "level": "warn",
+                                   "title": tr(f"{s['name']} לא רץ", f"{s['name']} is not running"),
+                                   "detail": tr("הסשן ברשימה אבל לא פעיל", "The session is in the list but not active"),
+                                   "fix": _fix("auto", tr("הפעל סשנים חסרים", "Start missing sessions"),
+                                               action="resume_missing")})
+                elif s["state"] == "waiting":
+                    issues.append({"id": f"waiting:{s['name']}", "level": "warn",
+                                   "title": tr(f"{s['name']} מחכה לתשובה", f"{s['name']} waits for an answer"),
+                                   "detail": tr("יש בסשן תפריט שמחכה לבחירה שלך",
+                                                "A menu in the session waits for your choice"),
+                                   "fix": _fix("manual", tr("פתח את הסשן וענה", "Open the session and answer"),
+                                               command=f"tmux attach -t {RC_SESSION} \\; select-window -t {s['name']}",
+                                               link=s["link"])})
+                elif s["rc"] == "disconnected":
+                    issues.append({"id": f"disconnected:{s['name']}", "level": "warn",
+                                   "title": tr(f"{s['name']}: Remote Control מנותק",
+                                               f"{s['name']}: Remote Control disconnected"),
+                                   "detail": tr("הסשן רץ אבל לא נראה בטלפון",
+                                                "The session runs but the phone does not see it"),
+                                   "fix": _fix("auto", tr("הפעל מחדש את הסשן", "Restart the session"),
+                                               action="restart_session")})
+            n_run = sum(1 for s in sessions if s["running"])
+            checks.append({"id": "resume_sessions", "title": tr("סשנים", "Sessions"), "level":
+                           "ok" if n_run == len(sessions) else "warn",
+                           "detail": tr(f"{n_run} מתוך {len(sessions)} רצים",
+                                        f"{n_run} of {len(sessions)} running")})
         overall = "bad" if any(i["level"] == "bad" for i in issues) else \
                   "warn" if issues else "ok"
         v = {"ts": int(time.time()), "overall": overall, "issues": issues, "checks": checks,
-             "sessions": sessions, "daemon": daemon, "network_up": bool(net.get("up"))}
-        _RC_CACHE.update(v=v, ts=time.time())
+             "sessions": sessions, "daemon": daemon, "network_up": bool(net.get("up")),
+             "features": feats, "rc_session": RC_SESSION, "lang": lang}
+        _RC_CACHE[lang] = (v, time.time())
         return {**v, "running_action": action_state()}
 
 
@@ -1174,7 +1338,12 @@ def _forti_log(n):
 
 def rc_logs(src="all", n=200, q=""):
     n = max(1, min(int(n or 200), 2000))
-    srcs = ["watchdog", "resume", "daemon", "forti"] if src == "all" else [src]
+    forti = forti_on()
+    if src not in ("all", "watchdog", "resume", "daemon", "forti"):
+        raise ValueError("unknown src")
+    srcs = (["watchdog", "resume", "daemon"] + (["forti"] if forti else [])) if src == "all" else [src]
+    if src == "forti" and not forti:      # no FortiClient on this machine: nothing to show
+        srcs = []
     lines = []
     for s in srcs:
         if s == "watchdog":
@@ -1185,8 +1354,6 @@ def rc_logs(src="all", n=200, q=""):
             lines += _daemon_log()
         elif s == "forti":
             lines += _forti_log(n)
-        else:
-            raise ValueError("unknown src")
     if len(srcs) > 1:                 # merge by time; untimed lines follow the line above
         k = ""
         for l in lines:
@@ -1226,12 +1393,13 @@ def _resume_env():
         env["RC_SESSION"] = RC_SESSION
     if os.environ.get("CC_RC_CMD"):
         env["RC_CMD"] = os.environ["CC_RC_CMD"]
+    env.setdefault("RC_DIR", default_dir())      # folder for lines without one, same as the server
     return env
 
 
 def do_resume_missing(results, dry=False):
     if not RESUME_SH.exists():
-        return _step(results, "resume_missing", False, f"{RESUME_SH} חסר")
+        return _step(results, "resume_missing", False, tr(f"{RESUME_SH} חסר", f"{RESUME_SH} is missing"))
     env = _resume_env()
     if dry:
         env["DRY_RUN"] = "1"
@@ -1251,7 +1419,7 @@ def _find_entry(name, uuid=None):
 def do_restart_session(results, name, dry=False):
     e = _find_entry(name)
     if not e:
-        return _step(results, f"restart {name}", False, "לא נמצא ברשימת הסשנים")
+        return _step(results, f"restart {name}", False, tr("לא נמצא ברשימת הסשנים", "Not found in the session list"))
     win = rc_window(name)
     pid = resume_pids(ps_list()).get(e["uuid"])
     if dry:
@@ -1270,24 +1438,25 @@ def do_restart_session(results, name, dry=False):
             if session_pane_state(pane(win, 60))[3]:
                 tmux("send-keys", "-t", win, "Escape")
                 return _step(results, f"exit {name}", False,
-                             "needs_user: יש עבודת רקע בסשן. לא עצרתי אותה. סגור אותה ידנית ונסה שוב")
+                             tr("needs_user: יש עבודת רקע בסשן. לא עצרתי אותה. סגור אותה ידנית ונסה שוב",
+                                "needs_user: background work runs in the session. I did not stop it. Close it by hand and try again"))
         if not gone:
-            return _step(results, f"exit {name}", False, "הסשן לא נסגר תוך 25 שניות")
-        _step(results, f"exit {name}", True, f"pid {pid} יצא")
+            return _step(results, f"exit {name}", False, tr("הסשן לא נסגר תוך 25 שניות", "The session did not close within 25 seconds"))
+        _step(results, f"exit {name}", True, tr(f"pid {pid} יצא", f"pid {pid} exited"))
         time.sleep(1)                  # let the shell prompt come back
     else:
-        _step(results, f"exit {name}", True, "לא רץ, מדלג ליציאה")
+        _step(results, f"exit {name}", True, tr("לא רץ, מדלג ליציאה", "not running, skipping the exit"))
     ok = do_resume_missing(results)
     for _ in range(10):
         if e["uuid"] in resume_pids(ps_list()):
-            return _step(results, f"verify {name}", True, "רץ שוב")
+            return _step(results, f"verify {name}", True, tr("רץ שוב", "running again"))
         time.sleep(1)
-    return _step(results, f"verify {name}", False, "התהליך לא עלה תוך 10 שניות") and ok
+    return _step(results, f"verify {name}", False, tr("התהליך לא עלה תוך 10 שניות", "The process did not start within 10 seconds")) and ok
 
 
 def do_restart_daemon(results, dry=False):
     if not check_network()["up"]:
-        return _step(results, "restart_daemon", False, "הרשת למטה, לא מפעיל מחדש")
+        return _step(results, "restart_daemon", False, tr("הרשת למטה, לא מפעיל מחדש", "The network is down, not restarting"))
     d = rc_daemon_proc()
     if dry:
         return _step(results, "restart_daemon (dry)", True,
@@ -1303,8 +1472,9 @@ def do_restart_daemon(results, dry=False):
         subprocess.Popen(["/bin/zsh", str(WATCHDOG_SH)], stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
-        return _step(results, "watchdog", True, "ה-watchdog יפעיל אותו מחדש (עד ~70 שניות)")
-    return _step(results, "watchdog", False, f"{WATCHDOG_SH} חסר")
+        return _step(results, "watchdog", True, tr("ה-watchdog יפעיל אותו מחדש (עד ~70 שניות)",
+                                                    "The watchdog restarts it (up to ~70 seconds)"))
+    return _step(results, "watchdog", False, tr(f"{WATCHDOG_SH} חסר", f"{WATCHDOG_SH} is missing"))
 
 
 def fix_all_plan():
@@ -1326,9 +1496,9 @@ def fix_all_plan():
 def do_fix_all(results, dry=False):
     st, plan = fix_all_plan()
     if not st["network_up"]:
-        return _step(results, "fix_all", False, "הרשת למטה, לא מתקן כלום")
+        return _step(results, "fix_all", False, tr("הרשת למטה, לא מתקן כלום", "The network is down, fixing nothing"))
     if not plan:
-        return _step(results, "fix_all", True, "אין מה לתקן אוטומטית")
+        return _step(results, "fix_all", True, tr("אין מה לתקן אוטומטית", "Nothing to fix automatically"))
     ok = True
     for act, name in plan:
         if act == "resume_missing":
@@ -1344,17 +1514,19 @@ def do_fix_all(results, dry=False):
 def rc_keep(req, dry=False):
     name = (req.get("name") or "").strip()
     uuid = (req.get("uuid") or "").strip().lower()
-    d = os.path.expanduser((req.get("dir") or "").strip() or str(HOME / "c-projects"))
+    d = os.path.expanduser((req.get("dir") or "").strip() or default_dir())
     if not RC_NAME_RE.fullmatch(name):
-        raise ValueError("שם לא תקין (בלי רווחים או |)")
+        raise ValueError(tr("שם לא תקין (בלי רווחים או |)", "Invalid name (no spaces or |)"))
     if not UUID_RE.fullmatch(uuid):
-        raise ValueError("מזהה סשן לא תקין")
+        raise ValueError(tr("מזהה סשן לא תקין", "Invalid session id"))
     if not os.path.isdir(d) or "|" in d:
-        raise ValueError("תיקייה לא קיימת")
+        raise ValueError(tr("תיקייה לא קיימת", "Folder does not exist"))
     for e in rc_conf_entries():
         if e["name"] == name or e["uuid"] == uuid:
-            raise ValueError(f"כבר ברשימה ({e['name']})")
+            raise ValueError(tr(f"כבר ברשימה ({e['name']})", f"Already in the list ({e['name']})"))
     line = f"{name}|{uuid}|{d}"
+    if not dry and not features()["restore"]:
+        raise ValueError(tr(*RESTORE_MISSING))
     if not dry:
         txt = RC_CONF.read_text() if RC_CONF.exists() else ""
         with open(RC_CONF, "a") as f:
@@ -1365,7 +1537,7 @@ def rc_keep(req, dry=False):
 def rc_drop(req, dry=False):
     name = (req.get("name") or "").strip()
     if not RC_NAME_RE.fullmatch(name):
-        raise ValueError("שם לא תקין")
+        raise ValueError(tr("שם לא תקין", "Invalid name"))
     lines = RC_CONF.read_text().splitlines(keepends=True)
     stamp = datetime.now().strftime("%Y%m%d")
     hit = None
@@ -1375,7 +1547,7 @@ def rc_drop(req, dry=False):
             hit = i
             break
     if hit is None:
-        raise ValueError("לא נמצא ברשימה")
+        raise ValueError(tr("לא נמצא ברשימה", "Not found in the list"))
     new = f"# [{stamp}] dropped from dashboard. {lines[hit].rstrip(chr(10))}\n"
     if not dry:
         lines[hit] = new
@@ -1499,13 +1671,15 @@ def session_resume(req, dry=False):
     """Add a found session to the auto-restore list (if needed) and start it."""
     uuid = (req.get("uuid") or "").strip().lower()
     if not UUID_RE.fullmatch(uuid):
-        raise ValueError("מזהה סשן לא תקין")
+        raise ValueError(tr("מזהה סשן לא תקין", "Invalid session id"))
     hits = list(PROJECTS.glob(f"*/{uuid}.jsonl"))
     if not hits:
-        raise ValueError("לא נמצא קובץ שיחה לסשן הזה")
+        raise ValueError(tr("לא נמצא קובץ שיחה לסשן הזה", "No transcript file found for this session"))
     meta = _session_meta(hits[0])
     if not meta["dir"] or not os.path.isdir(meta["dir"]):
-        raise ValueError("התיקייה של הסשן לא קיימת יותר")
+        raise ValueError(tr("התיקייה של הסשן לא קיימת יותר", "The session folder no longer exists"))
+    if not dry and not features()["restore"]:
+        raise ValueError(tr(*RESTORE_MISSING))
     results = []
     listed = {e["uuid"]: e["name"] for e in rc_conf_entries()}
     name = listed.get(uuid)
@@ -1518,36 +1692,46 @@ def session_resume(req, dry=False):
         line = rc_keep({"name": name, "uuid": uuid, "dir": meta["dir"]}, dry=dry)
         _step(results, "keep", True, line)
     if uuid in resume_pids(ps_list()):
-        _step(results, "start", True, "כבר רץ")
+        _step(results, "start", True, tr("כבר רץ", "already running"))
     else:
         do_resume_missing(results, dry=dry)
     return name, results
 
 
 RC_ACTIONS = ("fix_all", "restart_session", "resume_missing", "restart_daemon", "keep", "drop")
-RC_LABELS = {"fix_all": "תיקון הכול", "restart_session": "הפעלה מחדש של סשן",
-             "resume_missing": "הפעלת סשנים חסרים", "restart_daemon": "הפעלה מחדש של השרת"}
+RC_LABELS = {"fix_all": ("תיקון הכול", "Fix everything"),
+             "restart_session": ("הפעלה מחדש של סשן", "Restart a session"),
+             "resume_missing": ("הפעלת סשנים חסרים", "Start missing sessions"),
+             "restart_daemon": ("הפעלה מחדש של השרת", "Restart the server")}
+
+
+def rc_label(act):
+    he, en = RC_LABELS.get(act, (act, act))
+    return tr(he, en)
 
 
 def rc_action(req):
     act = req.get("action")
     dry = bool(req.get("dry"))
     if act not in RC_ACTIONS:
-        raise ValueError("פעולה לא מוכרת")
+        raise ValueError(tr("פעולה לא מוכרת", "Unknown action"))
     results = []
     if act == "keep":
         line = rc_keep(req, dry)
         _step(results, "keep" + (" (dry)" if dry else ""), True, line)
-        _RC_CACHE["ts"] = 0
-        return {"ok": True, "message": ("יתווסף לרשימה" if dry else "נוסף לרשימה"), "results": results}
+        _RC_CACHE.clear()
+        return {"ok": True, "message": (tr("יתווסף לרשימה", "Will be added to the list") if dry
+                                                else tr("נוסף לרשימה", "Added to the list")), "results": results}
     if act == "drop":
         line = rc_drop(req, dry)
         _step(results, "drop" + (" (dry)" if dry else ""), True, line)
-        _RC_CACHE["ts"] = 0
-        return {"ok": True, "message": ("יוסר מהרשימה (הסשן עצמו ממשיך לרוץ)" if dry
-                                        else "הוסר מהרשימה. הסשן עצמו ממשיך לרוץ"), "results": results}
+        _RC_CACHE.clear()
+        return {"ok": True, "message": (tr("יוסר מהרשימה (הסשן עצמו ממשיך לרוץ)",
+                                           "Will be removed from the list (the session itself keeps running)") if dry
+                                        else tr("הוסר מהרשימה. הסשן עצמו ממשיך לרוץ",
+                                                "Removed from the list. The session itself keeps running")), "results": results}
     if act == "restart_session" and not _find_entry(req.get("name") or ""):
-        raise ValueError("סשן לא נמצא ברשימה")
+        raise ValueError(tr("סשן לא נמצא ברשימה", "Session not found in the list"))
 
     def body(res):
         if act == "fix_all":
@@ -1560,27 +1744,31 @@ def rc_action(req):
 
     if dry:                            # dry runs are quick (no waits): answer inline
         ok = body(results)
-        return {"ok": bool(ok), "message": f"תוכנית בלבד: {RC_LABELS[act]}", "results": results,
+        return {"ok": bool(ok), "message": tr(f"תוכנית בלבד: {rc_label(act)}", f"Plan only: {rc_label(act)}"), "results": results,
                 "dry": True}
     with ACTION_LOCK:
         cur = ACTION["state"]
         if cur and not cur.get("done"):
-            return {"ok": False, "message": f"פעולה אחרת רצה: {RC_LABELS.get(cur['action'])}",
+            return {"ok": False, "message": tr(f"פעולה אחרת רצה: {rc_label(cur['action'])}",
+                                                   f"Another action is running: {rc_label(cur['action'])}"),
                     "results": []}
         state_ = {"action": act, "name": req.get("name"), "started": time.time(),
                   "done": False, "ok": None, "results": []}
         ACTION["state"] = state_
 
+    lang = cur_lang()
+
     def worker():
+        set_lang(lang)                 # thread-local: the action thread answers in the request language
         try:
             ok = body(state_["results"])
         except Exception as ex:
             ok = _step(state_["results"], act, False, ex)
         state_.update(done=True, ok=bool(ok), finished=time.time(),
-                      message=f"{RC_LABELS[act]}: {'הסתיים' if ok else 'נכשל'}")
-        _RC_CACHE["ts"] = 0
+                      message=f"{rc_label(act)}: " + (tr("הסתיים", "done") if ok else tr("נכשל", "failed")))
+        _RC_CACHE.clear()
     threading.Thread(target=worker, daemon=True).start()
-    return {"ok": True, "started": True, "message": f"התחיל: {RC_LABELS[act]}", "results": []}
+    return {"ok": True, "started": True, "message": tr(f"התחיל: {rc_label(act)}", f"Started: {rc_label(act)}"), "results": []}
 
 
 # ── static assets ────────────────────────────────────────────────────────────
@@ -1619,20 +1807,26 @@ class H(BaseHTTPRequestHandler):
         self._send(code, "application/json; charset=utf-8",
                    json.dumps(obj, ensure_ascii=False).encode())
 
+    def _lang_from_query(self):
+        from urllib.parse import parse_qs, urlparse
+        set_lang((parse_qs(urlparse(self.path).query).get("lang") or ["he"])[0])
+
     def do_GET(self):
+        self._lang_from_query()
+        route = self.path.split("?", 1)[0]
         if self.path == "/" or self.path.startswith("/index"):
             self._send(200, "text/html; charset=utf-8", (DASH / "index.html").read_bytes())
-        elif self.path == "/icon.svg":
+        elif route == "/icon.svg":
             self._send(200, "image/svg+xml", ICON_SVG.encode())
-        elif self.path == "/manifest.json":
+        elif route == "/manifest.json":
             self._json(200, MANIFEST)
-        elif self.path == "/api/state":
+        elif route == "/api/state":
             self._json(200, state())
         elif self.path.startswith("/api/monitor"):
             if "force" in self.path:
                 MONITOR_CACHE.unlink(missing_ok=True)
             self._json(200, monitor())
-        elif self.path == "/api/doctor":
+        elif route == "/api/doctor":
             self._json(200, {"checks": doctor()})
         elif self.path.startswith("/api/rc/status"):
             self._json(200, rc_status(force="force" in self.path))
@@ -1664,9 +1858,13 @@ class H(BaseHTTPRequestHandler):
             self._json(404, {"error": "not found"})
 
     def do_POST(self):
+        self._lang_from_query()
+        self.path = self.path.split("?", 1)[0]
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n) or b"{}")
+            if isinstance(req, dict) and req.get("lang"):
+                set_lang(req["lang"])
             out = {}
             if self.path == "/api/plugin":
                 toggle_plugin(req["name"], req["enabled"])
@@ -1699,9 +1897,9 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/api/config":
                 cd = (req.get("code_dir") or "").strip()
                 if cd and not SAFE_PATH.fullmatch(cd):
-                    raise ValueError("נתיב לא תקין")
+                    raise ValueError(tr("נתיב לא תקין", "Invalid path"))
                 if cd and not os.path.isdir(os.path.expanduser(cd)):
-                    raise ValueError("תיקייה לא קיימת")
+                    raise ValueError(tr("תיקייה לא קיימת", "Folder does not exist"))
                 jwrite(DASH_CONFIG, {**dash_config(), "code_dir": cd})
             elif self.path == "/api/login":
                 run_in_terminal("claude /login")
@@ -1729,8 +1927,9 @@ class H(BaseHTTPRequestHandler):
                 try:
                     name, results = session_resume(req, dry=bool(req.get("dry")))
                     ok = all(r["ok"] for r in results)
-                    msg = (f"תוכנית בלבד: {name}" if req.get("dry") else
-                           f"{name} הופעל ונוסף לשחזור האוטומטי" if ok else f"{name}: חלק מהשלבים נכשלו")
+                    msg = (tr(f"תוכנית בלבד: {name}", f"Plan only: {name}") if req.get("dry") else
+                           tr(f"{name} הופעל ונוסף לשחזור האוטומטי", f"{name} started and added to auto-restore")
+                           if ok else tr(f"{name}: חלק מהשלבים נכשלו", f"{name}: some steps failed"))
                     return self._json(200, {"ok": ok, "name": name, "message": msg, "results": results,
                                             "dry": bool(req.get("dry"))})
                 except ValueError as e:
@@ -1752,7 +1951,7 @@ class H(BaseHTTPRequestHandler):
                               "rules": [r for r in c.get("rules", [])
                                         if SAFE_FILE.fullmatch(r) and (RULES_DIR / r).exists()]}
                     if preset["cwd"] and not SAFE_PATH.fullmatch(preset["cwd"]):
-                        raise ValueError("נתיב לא תקין")
+                        raise ValueError(tr("נתיב לא תקין", "Invalid path"))
                     preset["profiles"] = [x for x in preset["profiles"]
                                           if re.fullmatch(r"[A-Za-z0-9._-]+\.json", x)
                                           and (MCP_DIR / x).exists()]
