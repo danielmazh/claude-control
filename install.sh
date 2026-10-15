@@ -36,6 +36,23 @@ lctl() {
   launchctl "$@"
 }
 
+# Reload an agent. bootout returns before the old job is gone, and an immediate
+# bootstrap then fails with "Input/output error", so wait for it and retry.
+reload_agent() {
+  local label="$1" plist="$2" i
+  launchctl bootout "gui/$UID_NUM/$label" 2>/dev/null || true
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1 || break
+    sleep 0.5
+  done
+  for i in 1 2 3 4 5; do
+    launchctl bootstrap "gui/$UID_NUM" "$plist" 2>/dev/null && return 0
+    sleep 1
+  done
+  echo "  could not load $label. Run: launchctl bootstrap gui/$UID_NUM $plist" >&2
+  return 1
+}
+
 mkdir -p "$DEST" "$AGENTS" "$HOME/Library/Logs"
 cp "$SRC/server.py" "$SRC/index.html" "$SRC/README.md" "$SRC/cl-dash" "$DEST/"
 chmod +x "$DEST/cl-dash"
@@ -77,8 +94,7 @@ LABEL=$(basename "$PLIST" .plist)
 if [ -n "${CC_NO_LAUNCHCTL:-}" ]; then
   echo "  (CC_NO_LAUNCHCTL set: agent $LABEL not loaded)"
 else
-  launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
-  launchctl bootstrap "gui/$UID_NUM" "$PLIST"
+  reload_agent "$LABEL" "$PLIST"
   echo "launchd agent running: $LABEL"
 fi
 
@@ -158,8 +174,11 @@ $sched
 </plist>
 EOF
     echo "  launchd agent written: $plist"
-    lctl bootout "gui/$UID_NUM/$label" 2>/dev/null || true
-    lctl bootstrap "gui/$UID_NUM" "$plist"
+    if [ -n "${CC_NO_LAUNCHCTL:-}" ]; then
+      echo "  (CC_NO_LAUNCHCTL set: agent $label not loaded)"
+    else
+      reload_agent "$label" "$plist"
+    fi
     [ -z "${CC_NO_LAUNCHCTL:-}" ] && echo "  launchd agent running: $label"
     return 0
   }
