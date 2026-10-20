@@ -1,7 +1,7 @@
 # personal runtime state — never commit
 presets.json
 config.json
-.monitor-cache.json
+.monitor-cache*.json
 .sounds-off
 .session-rules.md
 __pycache__/
