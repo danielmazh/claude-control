@@ -25,7 +25,11 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 HOME = Path.home()
-CL = HOME / ".claude"
+# CLAUDE_CONFIG_DIR moves the whole Claude Code config (and .claude.json) out of ~/.claude
+CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR")
+CL = Path(CONFIG_DIR).expanduser() if CONFIG_DIR else HOME / ".claude"
+# commands typed into a fresh shell (tmux / Terminal) must carry it explicitly
+CLAUDE_SH = f"CLAUDE_CONFIG_DIR={shlex.quote(str(CL))} claude" if CONFIG_DIR else "claude"
 DASH = Path(__file__).resolve().parent
 SETTINGS = CL / "settings.json"
 CLAUDE_MD = CL / "CLAUDE.md"
@@ -33,7 +37,7 @@ SKILLS = CL / "skills"
 ARCHIVE = CL / "skills-archive"
 MCP_DIR = CL / "registry" / "mcp"
 RULES_DIR = CL / "rules"
-CLAUDE_JSON = HOME / ".claude.json"
+CLAUDE_JSON = CL / ".claude.json" if CONFIG_DIR else HOME / ".claude.json"
 INSTALLED = CL / "plugins" / "installed_plugins.json"
 RATE_LIMITS = CL / "statusline-cache" / "rate-limits.json"
 SKILLS_TOK = CL / "statusline-cache" / "skills.tok"
@@ -192,17 +196,17 @@ def delete_user_preset(pid):
 
 def build_cmd(p):
     if p.get("profiles") is None:
-        cmd = "claude"
+        cmd = CLAUDE_SH
     else:
         tools = CLT_BARE if p.get("bare") else (CLT_FULL if p.get("skills", True) else CLT_NOSKILL)
         profs = p.get("profiles") or []
         if profs:
-            cfgs = " ".join(f"~/.claude/registry/mcp/{x}" for x in profs)
+            cfgs = " ".join(shlex.quote(str(MCP_DIR / x)) for x in profs)
         elif (MCP_DIR / "none.json").exists():
-            cfgs = "~/.claude/registry/mcp/none.json"
+            cfgs = shlex.quote(str(MCP_DIR / "none.json"))
         else:                          # no MCP registry on this machine: an empty inline config
             cfgs = """'{"mcpServers":{}}'"""
-        cmd = f'claude --strict-mcp-config --mcp-config {cfgs} --tools "{tools}"'
+        cmd = f'{CLAUDE_SH} --strict-mcp-config --mcp-config {cfgs} --tools "{tools}"'
         if p.get("bare"):
             cmd += ' --agents "{}"'
     if p.get("model"):
@@ -466,7 +470,7 @@ def remote_control(target):
                          start_new_session=True)
         return {"starting": True, "tmux": RC_DAEMON_TARGET}
     # no watchdog on this machine: open it the old way (tmux/Terminal)
-    cmd = "claude remote-control"
+    cmd = f"{CLAUDE_SH} remote-control"
     if target.get("type") == "tmux":
         if shutil.which("tmux") is None:
             raise ValueError(tr("tmux לא מותקן — ראה טאב הוראות", "tmux is not installed - see the Guide page"))
@@ -696,7 +700,7 @@ def doctor():
 
 
 # cl-dash opens the dashboard and starts it through launchd when needed (never a second server)
-ALIAS_LINE = "alias cl-dash='~/.claude/dashboard/cl-dash'"
+ALIAS_LINE = f"alias cl-dash='{DASH / 'cl-dash'}'"
 
 
 def alias_installed():
@@ -1185,7 +1189,7 @@ def rc_status(force=False):
             d = tr("לא מחובר לחשבון Claude", "Not signed in to a Claude account") if auth.get("ok") \
                 else tr("לא ניתן לבדוק התחברות", "Cannot check the sign-in")
             fx = _fix("manual", tr("התחבר מחדש בטרמינל", "Sign in again in a terminal"),
-                      command="claude auth login")
+                      command=f"{CLAUDE_SH} auth login")
             checks.append({"id": "auth", "title": tr("התחברות", "Sign-in"), "level": "bad",
                            "detail": d, "action": fx})
             issues.append({"id": "auth", "level": "bad",
@@ -1393,6 +1397,8 @@ def _resume_env():
         env["RC_SESSION"] = RC_SESSION
     if os.environ.get("CC_RC_CMD"):
         env["RC_CMD"] = os.environ["CC_RC_CMD"]
+    elif CONFIG_DIR:
+        env["RC_CMD"] = f"ANTHROPIC_BASE_URL= CLAUDE_CONFIG_DIR={shlex.quote(str(CL))} {shlex.quote(claude_bin())}"
     env.setdefault("RC_DIR", default_dir())      # folder for lines without one, same as the server
     return env
 
@@ -1902,7 +1908,7 @@ class H(BaseHTTPRequestHandler):
                     raise ValueError(tr("תיקייה לא קיימת", "Folder does not exist"))
                 jwrite(DASH_CONFIG, {**dash_config(), "code_dir": cd})
             elif self.path == "/api/login":
-                run_in_terminal("claude /login")
+                run_in_terminal(f"{CLAUDE_SH} /login")
             elif self.path == "/api/install-alias":
                 install_alias()
             elif self.path == "/api/update":
