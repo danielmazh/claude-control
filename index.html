@@ -603,7 +603,7 @@ he:{
  ed_cwd:"תיקיית עבודה",
  ed_flags_exp:"<b>סקילים</b> — תפריט היכולות: ‏~2-3k בפתיחה, הגוף נטען רק בשימוש. <b>מינימלי</b> — 6 כלים בסיסיים, בלי סקילים ובלי sub-agents; גובר על השאר. שניהם כבויים = כלים מלאים בלי תפריט סקילים.",
  mine_suffix:" — שלי",
- refresh_tip:"רענון מלא של כל הדשבורד — הגדרות, פרופילים, סקילים, MCP, וגם חישוב מחדש של נתוני המוניטור",refreshed:"הכול רוענן ✓",acct_tip:"חשבון Claude פעיל — כל הדפים וכל סשן חדש עובדים מתיקיית ההגדרות שלו",acct_switched:"עברת לחשבון {n}",
+ refresh_tip:"רענון מלא של כל הדשבורד — הגדרות, פרופילים, סקילים, MCP, וגם חישוב מחדש של נתוני המוניטור",refreshed:"הכול רוענן ✓",acct_tip:"חשבון Claude פעיל — כל הדפים וכל סשן חדש עובדים מתיקיית ההגדרות שלו",acct_switched:"עברת לחשבון {n}",acct_names:"שמות חשבונות",acct_names_tip:"השם שמופיע בבורר החשבונות בסרגל העליון. ריק = שם התיקייה.",
  limits_age:"נכון לפני {t}",limits_now:"עדכני",
  limits_src_tip:"נתוני המכסות מגיעים מ-Claude Code עצמו (payload של ‎/usage דרך שורת הסטטוס) — הם מתעדכנים רק בזמן שסשן Claude פתוח. אין סשן פתוח = הנתון נשאר מהרגע האחרון שהיה.",
  add_mcp:"+ שרת חדש",mcp_add_t:"הוספת שרת MCP",mcp_name:"שם (a-z, מקפים)",mcp_kind:"סוג",mcp_http:"‏HTTP מתארח (כולל OAuth)",mcp_stdio:"פקודה מקומית (stdio)",mcp_url:"כתובת https",mcp_cmd_l:"פקודה מלאה",
@@ -798,7 +798,7 @@ en:{
  ed_cwd:"Working folder",
  ed_flags_exp:"<b>Skills</b> — the capability menu: ~2-3k at start, bodies load on use. <b>Bare</b> — 6 basic tools, no skills, no sub-agents; overrides the rest. Both off = full tools without the skills menu.",
  mine_suffix:" — mine",
- refresh_tip:"Full dashboard refresh — settings, profiles, skills, MCP, plus a monitor recompute",refreshed:"Everything refreshed ✓",acct_tip:"Active Claude account: every page and every new session use its config folder",acct_switched:"Switched to {n}",
+ refresh_tip:"Full dashboard refresh — settings, profiles, skills, MCP, plus a monitor recompute",refreshed:"Everything refreshed ✓",acct_tip:"Active Claude account: every page and every new session use its config folder",acct_switched:"Switched to {n}",acct_names:"Account names",acct_names_tip:"The name shown in the account switcher in the top bar. Empty = the folder name.",
  limits_age:"as of {t} ago",limits_now:"live",
  limits_src_tip:"Quota numbers come from Claude Code itself (the /usage payload via the status line) — they update only while a Claude session is open. No open session = the number stays from the last moment one was.",
  add_mcp:"+ New server",mcp_add_t:"Add MCP server",mcp_name:"Name (a-z, dashes)",mcp_kind:"Type",mcp_http:"Hosted HTTP (incl. OAuth)",mcp_stdio:"Local command (stdio)",mcp_url:"https URL",mcp_cmd_l:"Full command",
@@ -2053,7 +2053,7 @@ function renderAll(){
 function renderAcctSel(){
   const a=S.accounts||[],sel=$("acctSel");
   sel.hidden=a.length<2;sel.title=t("acct_tip");sel.setAttribute("aria-label",t("acct_tip"));
-  sel.innerHTML=a.map(x=>`<option value="${esc(x.dir)}"${x.active?" selected":""}>${esc(x.name)}${x.email?" · "+esc(x.email):""}</option>`).join("");
+  sel.innerHTML=a.map(x=>`<option value="${esc(x.dir)}"${x.active?" selected":""}>${esc(x.name)}</option>`).join("");
 }
 async function switchAccount(dir){
   const j=await api("/api/account",{dir}).catch(()=>null);
@@ -2329,6 +2329,11 @@ function renderDashCfg(){
         <input type="text" id="cfgCode" dir="ltr" value="${esc(S.config.code_dir||"")}" placeholder="~/projects">
         <button onclick="api('/api/config',{code_dir:$('cfgCode').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
       <div class="hint">${n?t("repos_found").replace("{n}",n):t("no_code_dir")}</div></div></div>`
+   +((S.accounts||[]).length>1?`<div class="row"><div><div class="name">${t("acct_names")} ${Q("acct_names_tip")}</div>
+      ${S.accounts.map((a,i)=>`<div class="field-inline">
+        <input type="text" id="acctName${i}" value="${esc(a.name)}" placeholder="${esc(a.folder)}" maxlength="40">
+        <button onclick="api('/api/account/name',{dir:S.accounts[${i}].dir,name:$('acctName${i}').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
+      <div class="hint" dir="ltr">${esc(a.folder)}</div>`).join("")}</div></div>`:"")
    +mrow(`${t("alias_row")} ${Q("alias_tip")}`,`<span class="cmd" title="alias cl-dash='python3 ~/.claude/dashboard/server.py'">alias cl-dash='python3 ~/.claude/dashboard/server.py'</span>`,
       S.alias_installed?`<span class="tag t-live">${t("alias_installed")}</span>`
         :`<button class="sm primary" onclick="api('/api/install-alias',{}).then(()=>toast(t('saved')))">${t("alias_install")}</button>`,"trunc");

@@ -593,13 +593,23 @@ def account_info():
 
 
 def accounts():
-    out = []
-    for d in account_dirs():
-        cj = d / ".claude.json" if d != DEFAULT_CL else HOME / ".claude.json"
-        a = jread(cj).get("oauthAccount") or {}
-        out.append({"dir": str(d), "name": "default" if d == DEFAULT_CL else d.name.removeprefix(".claude-"),
-                    "email": a.get("emailAddress", ""), "active": d == CL})
-    return out
+    names = dash_config().get("account_names") or {}
+    return [{"dir": str(d), "folder": "~/" + d.name if d.parent == HOME else str(d),
+             "name": names.get(str(d)) or ("default" if d == DEFAULT_CL else d.name.removeprefix(".claude-")),
+             "active": d == CL} for d in account_dirs()]
+
+
+def rename_account(d, name):
+    d, name = Path(d or "").expanduser(), (name or "").strip()
+    if d not in account_dirs():
+        raise ValueError(tr("חשבון לא קיים", "Unknown account"))
+    if name and not SAFE_NAME.fullmatch(name):
+        raise ValueError(tr("שם לא תקין", "Invalid name"))
+    cfg = dash_config()
+    names = {k: v for k, v in (cfg.get("account_names") or {}).items() if k != str(d)}
+    if name:                       # empty = back to the folder name
+        names[str(d)] = name
+    jwrite(DASH_CONFIG, {**cfg, "account_names": names})
 
 
 def switch_account(d):
@@ -1972,6 +1982,8 @@ class H(BaseHTTPRequestHandler):
                 jwrite(DASH_CONFIG, {**dash_config(), "code_dir": cd})
             elif self.path == "/api/account":
                 switch_account(req.get("dir"))
+            elif self.path == "/api/account/name":
+                rename_account(req.get("dir"), req.get("name"))
             elif self.path == "/api/login":
                 run_in_terminal(f"{CLAUDE_SH} /login")
             elif self.path == "/api/install-alias":
