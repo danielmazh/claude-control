@@ -132,12 +132,23 @@ The dashboard detects what this machine has and shows the result as `features` i
 FortiClient, the MCP registry and the quota bars are optional. `CC_FEATURE_<NAME>=0|1`
 (for example `CC_FEATURE_FORTICLIENT=0`) overrides one detection, for tests.
 
+### Several Claude accounts
+
+Each Claude Code config folder is one account: `~/.claude`, any `~/.claude-<name>`
+folder (for example `~/.claude-personal`, used with `CLAUDE_CONFIG_DIR`), and the
+folder in `$CLAUDE_CONFIG_DIR` when the server starts. With two or more, a switcher in
+the top bar picks the active one. Every page then reads that folder, and new sessions,
+sign-in and Remote Control start with `CLAUDE_CONFIG_DIR` set to it. The choice and
+the names (Manage, Dashboard configuration, Account names) are kept in `config.json`.
+Presets, the Claude Desktop config and the restore scripts are shared by all accounts.
+
 ## Settings (environment)
 
 | Variable | Default | Use |
 |---|---|---|
 | `CC_PORT` | `7799` | Port. Use another one for a second, development copy. |
 | `CC_DATA` | the script folder | Where state files live (presets, config, caches). |
+| `CLAUDE_CONFIG_DIR` | unset | Claude Code config folder to start with (see "Several Claude accounts"). The account picked in the dashboard wins after that. |
 | `CC_NO_BROWSER` | unset | `1` = do not open a browser on start. |
 | `CC_LABEL` | `local.claude-control` | launchd label used by `install.sh` for a new agent. |
 | `CC_LABEL_CLAUDE_RC_WATCHDOG`, `CC_LABEL_CLAUDE_RC_RESUME` | found by suffix | launchd labels of the restore scripts, if the suffix search does not fit. |
@@ -186,7 +197,7 @@ Restore and search actions (POST, with `"dry": true` for a plan only):
 Other POST actions used by the pages: `/api/model`, `/api/plugin`, `/api/sounds`,
 `/api/skill`, `/api/skill/create`, `/api/preset`, `/api/preset/delete`, `/api/rule`,
 `/api/rule/get`, `/api/rule/delete`, `/api/claude-md/get`, `/api/claude-md/save`,
-`/api/config`, `/api/login`, `/api/install-alias`, `/api/update`,
+`/api/config`, `/api/account`, `/api/account/name`, `/api/login`, `/api/install-alias`, `/api/update`,
 `/api/remote-control`, `/api/mcp-server/add`, `/api/file/create`, `/api/open`,
 `/api/shutdown`.
 

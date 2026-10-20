@@ -25,29 +25,72 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 HOME = Path.home()
-CL = HOME / ".claude"
+DEFAULT_CL = HOME / ".claude"
 DASH = Path(__file__).resolve().parent
-SETTINGS = CL / "settings.json"
-CLAUDE_MD = CL / "CLAUDE.md"
-SKILLS = CL / "skills"
-ARCHIVE = CL / "skills-archive"
-MCP_DIR = CL / "registry" / "mcp"
-RULES_DIR = CL / "rules"
-CLAUDE_JSON = HOME / ".claude.json"
-INSTALLED = CL / "plugins" / "installed_plugins.json"
-RATE_LIMITS = CL / "statusline-cache" / "rate-limits.json"
-SKILLS_TOK = CL / "statusline-cache" / "skills.tok"
 # runtime data dir: CC_DATA lets a dev copy run next to the live one without
 # sharing presets/config/cache (default: next to this file, as before)
 DATA = Path(os.environ.get("CC_DATA") or DASH).expanduser().resolve()
 DATA.mkdir(parents=True, exist_ok=True)
 USER_PRESETS = DATA / "presets.json"
 DASH_CONFIG = DATA / "config.json"
-MONITOR_CACHE = DATA / ".monitor-cache.json"
 SOUNDS_OFF_FLAG = DATA / ".sounds-off"
 SESSION_RULES = DATA / ".session-rules.md"
 DESKTOP_CFG = HOME / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-PROJECTS = CL / "projects"
+
+
+# ── accounts: each Claude Code config folder (~/.claude, or one set with
+# CLAUDE_CONFIG_DIR such as ~/.claude-personal) is one account. One is active;
+# every Claude path below and every `claude` command follow it.
+def account_dirs():
+    out = [DEFAULT_CL] if DEFAULT_CL.is_dir() else []
+    out += sorted(d for d in HOME.glob(".claude-*") if d.is_dir() and any(
+        (d / x).exists() for x in ("settings.json", ".claude.json", "projects")))
+    env = os.environ.get("CLAUDE_CONFIG_DIR")
+    if env and Path(env).expanduser().is_dir() and Path(env).expanduser() not in out:
+        out.append(Path(env).expanduser())
+    return out
+
+
+def use_account(d):
+    global CL, CONFIG_DIR, CLAUDE_SH, SETTINGS, CLAUDE_MD, SKILLS, ARCHIVE, MCP_DIR, RULES_DIR
+    global CLAUDE_JSON, INSTALLED, RATE_LIMITS, SKILLS_TOK, PROJECTS, MONITOR_CACHE
+    CL = Path(d).expanduser()
+    CONFIG_DIR = None if CL == DEFAULT_CL else str(CL)
+    # commands typed into a fresh shell (tmux / Terminal) must carry it explicitly;
+    # claude subprocesses of this server get it through os.environ
+    CLAUDE_SH = f"CLAUDE_CONFIG_DIR={shlex.quote(CONFIG_DIR)} claude" if CONFIG_DIR else "claude"
+    if CONFIG_DIR:
+        os.environ["CLAUDE_CONFIG_DIR"] = CONFIG_DIR
+    else:
+        os.environ.pop("CLAUDE_CONFIG_DIR", None)
+    SETTINGS = CL / "settings.json"
+    CLAUDE_MD = CL / "CLAUDE.md"
+    SKILLS = CL / "skills"
+    ARCHIVE = CL / "skills-archive"
+    MCP_DIR = CL / "registry" / "mcp"
+    RULES_DIR = CL / "rules"
+    CLAUDE_JSON = CL / ".claude.json" if CONFIG_DIR else HOME / ".claude.json"
+    INSTALLED = CL / "plugins" / "installed_plugins.json"
+    RATE_LIMITS = CL / "statusline-cache" / "rate-limits.json"
+    SKILLS_TOK = CL / "statusline-cache" / "skills.tok"
+    PROJECTS = CL / "projects"
+    MONITOR_CACHE = DATA / (f".monitor-cache-{CL.name}.json" if CONFIG_DIR else ".monitor-cache.json")
+
+
+def _initial_account():
+    """The account picked last in the dashboard, else CLAUDE_CONFIG_DIR, else ~/.claude."""
+    dirs = account_dirs()
+    try:
+        saved = Path(json.loads(DASH_CONFIG.read_text()).get("account") or "").expanduser()
+        if saved in dirs:
+            return saved
+    except Exception:
+        pass
+    env = os.environ.get("CLAUDE_CONFIG_DIR")
+    return Path(env).expanduser() if env else DEFAULT_CL
+
+
+use_account(_initial_account())
 PORT = int(os.environ.get("CC_PORT") or 7799)
 
 # ── language: messages, check titles and issue texts in Hebrew (default) or English.
@@ -192,17 +235,17 @@ def delete_user_preset(pid):
 
 def build_cmd(p):
     if p.get("profiles") is None:
-        cmd = "claude"
+        cmd = CLAUDE_SH
     else:
         tools = CLT_BARE if p.get("bare") else (CLT_FULL if p.get("skills", True) else CLT_NOSKILL)
         profs = p.get("profiles") or []
         if profs:
-            cfgs = " ".join(f"~/.claude/registry/mcp/{x}" for x in profs)
+            cfgs = " ".join(shlex.quote(str(MCP_DIR / x)) for x in profs)
         elif (MCP_DIR / "none.json").exists():
-            cfgs = "~/.claude/registry/mcp/none.json"
+            cfgs = shlex.quote(str(MCP_DIR / "none.json"))
         else:                          # no MCP registry on this machine: an empty inline config
             cfgs = """'{"mcpServers":{}}'"""
-        cmd = f'claude --strict-mcp-config --mcp-config {cfgs} --tools "{tools}"'
+        cmd = f'{CLAUDE_SH} --strict-mcp-config --mcp-config {cfgs} --tools "{tools}"'
         if p.get("bare"):
             cmd += ' --agents "{}"'
     if p.get("model"):
@@ -466,7 +509,7 @@ def remote_control(target):
                          start_new_session=True)
         return {"starting": True, "tmux": RC_DAEMON_TARGET}
     # no watchdog on this machine: open it the old way (tmux/Terminal)
-    cmd = "claude remote-control"
+    cmd = f"{CLAUDE_SH} remote-control"
     if target.get("type") == "tmux":
         if shutil.which("tmux") is None:
             raise ValueError(tr("tmux לא מותקן — ראה טאב הוראות", "tmux is not installed - see the Guide page"))
@@ -549,6 +592,39 @@ def account_info():
             "org": (a.get("organizationName") or "")[:40]}
 
 
+def accounts():
+    names = dash_config().get("account_names") or {}
+    return [{"dir": str(d), "folder": "~/" + d.name if d.parent == HOME else str(d),
+             "name": names.get(str(d)) or ("default" if d == DEFAULT_CL else d.name.removeprefix(".claude-")),
+             "active": d == CL} for d in account_dirs()]
+
+
+def rename_account(d, name):
+    d, name = Path(d or "").expanduser(), (name or "").strip()
+    if d not in account_dirs():
+        raise ValueError(tr("חשבון לא קיים", "Unknown account"))
+    if name and not SAFE_NAME.fullmatch(name):
+        raise ValueError(tr("שם לא תקין", "Invalid name"))
+    cfg = dash_config()
+    names = {k: v for k, v in (cfg.get("account_names") or {}).items() if k != str(d)}
+    if name:                       # empty = back to the folder name
+        names[str(d)] = name
+    jwrite(DASH_CONFIG, {**cfg, "account_names": names})
+
+
+def switch_account(d):
+    d = Path(d or "").expanduser()
+    if d not in account_dirs():
+        raise ValueError(tr("חשבון לא קיים", "Unknown account"))
+    use_account(d)
+    jwrite(DASH_CONFIG, {**dash_config(), "account": str(d)})
+    _AUTH.update(v=None, ts=0)
+    with _MCP_LOCK:
+        _MCP_LIST.update(res=None, ts=0)
+    with _RC_LOCK:
+        _RC_CACHE.clear()
+
+
 def desktop_info():
     cfg = jread(DESKTOP_CFG)
     return {"exists": DESKTOP_CFG.exists(),
@@ -576,6 +652,7 @@ def state():
         "mcp_profiles": mcp_profiles(),
         "hooks": hooks_summary(),
         "account": account_info(),
+        "accounts": accounts(),
         "presets": all_presets(),
         "rules": rules_list(),
         "tmux": tmux_sessions(),
@@ -696,7 +773,7 @@ def doctor():
 
 
 # cl-dash opens the dashboard and starts it through launchd when needed (never a second server)
-ALIAS_LINE = "alias cl-dash='~/.claude/dashboard/cl-dash'"
+ALIAS_LINE = f"alias cl-dash='{DASH / 'cl-dash'}'"
 
 
 def alias_installed():
@@ -1185,7 +1262,7 @@ def rc_status(force=False):
             d = tr("לא מחובר לחשבון Claude", "Not signed in to a Claude account") if auth.get("ok") \
                 else tr("לא ניתן לבדוק התחברות", "Cannot check the sign-in")
             fx = _fix("manual", tr("התחבר מחדש בטרמינל", "Sign in again in a terminal"),
-                      command="claude auth login")
+                      command=f"{CLAUDE_SH} auth login")
             checks.append({"id": "auth", "title": tr("התחברות", "Sign-in"), "level": "bad",
                            "detail": d, "action": fx})
             issues.append({"id": "auth", "level": "bad",
@@ -1393,6 +1470,8 @@ def _resume_env():
         env["RC_SESSION"] = RC_SESSION
     if os.environ.get("CC_RC_CMD"):
         env["RC_CMD"] = os.environ["CC_RC_CMD"]
+    elif CONFIG_DIR:
+        env["RC_CMD"] = f"ANTHROPIC_BASE_URL= CLAUDE_CONFIG_DIR={shlex.quote(CONFIG_DIR)} {shlex.quote(claude_bin())}"
     env.setdefault("RC_DIR", default_dir())      # folder for lines without one, same as the server
     return env
 
@@ -1901,8 +1980,12 @@ class H(BaseHTTPRequestHandler):
                 if cd and not os.path.isdir(os.path.expanduser(cd)):
                     raise ValueError(tr("תיקייה לא קיימת", "Folder does not exist"))
                 jwrite(DASH_CONFIG, {**dash_config(), "code_dir": cd})
+            elif self.path == "/api/account":
+                switch_account(req.get("dir"))
+            elif self.path == "/api/account/name":
+                rename_account(req.get("dir"), req.get("name"))
             elif self.path == "/api/login":
-                run_in_terminal("claude /login")
+                run_in_terminal(f"{CLAUDE_SH} /login")
             elif self.path == "/api/install-alias":
                 install_alias()
             elif self.path == "/api/update":

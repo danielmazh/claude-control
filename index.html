@@ -38,7 +38,8 @@
   .wrap{max-width:1344px;margin:0 auto;width:100%;min-width:0}
   .narrow{max-width:1040px;margin-inline:auto}
   .ic{width:18px;height:18px;flex:none;vertical-align:middle}
-  [dir="ltr"] .ic.ltr-flip,[dir="rtl"] .ic.rtl-flip{transform:scaleX(-1)}
+  /* :dir() follows the nearest dir attribute; [dir=rtl] also matched <html dir=rtl> in English */
+  .ic.ltr-flip:dir(ltr),.ic.rtl-flip:dir(rtl){transform:scaleX(-1)}
   a{color:inherit}
   .page{display:none;min-width:0} .page.on{display:block}
   section{background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -444,6 +445,7 @@
 
   /* session search (2026-10-15): top bar box, #/search page, fallen panel on #/sessions */
   .tb-search{position:relative;display:flex;align-items:center;width:220px;flex:none;margin:0}
+  #acctSel{max-width:220px;flex:none}
   .tb-search .ic{position:absolute;inset-inline-start:11px;width:15px;height:15px;color:var(--muted);pointer-events:none}
   .tb-search input[type=text]{height:var(--bh);padding-inline-start:34px;border-radius:10px;background:var(--surface)}
   .sr-ctl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px var(--px);border-bottom:1px solid var(--line)}
@@ -505,6 +507,7 @@
     <div class="tb-end">
       <label class="tb-search" id="tbSearch"><span id="tbSearchIc"></span>
         <input type="text" id="tbQ" dir="auto" autocomplete="off" spellcheck="false" onkeydown="tbSearchKey(event)"></label>
+      <select id="acctSel" hidden onchange="switchAccount(this.value)"></select>
       <span class="tb-status" id="tbStatus"></span>
       <span id="tbExtra"></span>
       <button class="ib" id="langBtn" onclick="setLang(L==='he'?'en':'he')"></button>
@@ -601,7 +604,7 @@ he:{
  ed_cwd:"תיקיית עבודה",
  ed_flags_exp:"<b>סקילים</b> — תפריט היכולות: ‏~2-3k בפתיחה, הגוף נטען רק בשימוש. <b>מינימלי</b> — 6 כלים בסיסיים, בלי סקילים ובלי sub-agents; גובר על השאר. שניהם כבויים = כלים מלאים בלי תפריט סקילים.",
  mine_suffix:" — שלי",
- refresh_tip:"רענון מלא של כל הדשבורד — הגדרות, פרופילים, סקילים, MCP, וגם חישוב מחדש של נתוני המוניטור",refreshed:"הכול רוענן ✓",
+ refresh_tip:"רענון מלא של כל הדשבורד — הגדרות, פרופילים, סקילים, MCP, וגם חישוב מחדש של נתוני המוניטור",refreshed:"הכול רוענן ✓",acct_tip:"חשבון Claude פעיל — כל הדפים וכל סשן חדש עובדים מתיקיית ההגדרות שלו",acct_switched:"עברת לחשבון {n}",acct_names:"שמות חשבונות",acct_names_tip:"השם שמופיע בבורר החשבונות בסרגל העליון. ריק = שם התיקייה.",
  limits_age:"נכון לפני {t}",limits_now:"עדכני",
  limits_src_tip:"נתוני המכסות מגיעים מ-Claude Code עצמו (payload של ‎/usage דרך שורת הסטטוס) — הם מתעדכנים רק בזמן שסשן Claude פתוח. אין סשן פתוח = הנתון נשאר מהרגע האחרון שהיה.",
  add_mcp:"+ שרת חדש",mcp_add_t:"הוספת שרת MCP",mcp_name:"שם (a-z, מקפים)",mcp_kind:"סוג",mcp_http:"‏HTTP מתארח (כולל OAuth)",mcp_stdio:"פקודה מקומית (stdio)",mcp_url:"כתובת https",mcp_cmd_l:"פקודה מלאה",
@@ -653,7 +656,7 @@ he:{
  cd_monitor:"טוקנים ועלות לפי יום, מודל ופרויקט.",
  cd_manage:"כללים, סקילים וקבצים, מודל, MCP, hooks, תוספים.",
  cd_guide:"מה עושה כל חלק, ומה עושים כשמשהו לא עובד.",
- upd_ago:"עודכן לפני {n} שניות · מתעדכן לבד",live_5s:"חי · כל 5 שניות",check_now:"בדוק עכשיו",
+ auto_sync:"סנכרון אוטומטי",sync_fail:"הסנכרון נכשל · סנכרון אחרון: {t}",sync_never:"אף פעם",live_5s:"חי · כל 5 שניות",check_now:"בדוק עכשיו",
  lang_tip:"English",power_tip:"כיבוי שרת הדשבורד",
  checking:"בודק את המערכת…",all_ok:"הכל תקין",all_ok_sub:"כל הסשנים רצים ומחוברים.",attention:"שים לב",
  issues_1:"בעיה אחת",issues_n:"{n} בעיות",can_auto:"אפשר לתקן אוטומטית",need_you:"נדרשת פעולה ממך",
@@ -796,7 +799,7 @@ en:{
  ed_cwd:"Working folder",
  ed_flags_exp:"<b>Skills</b> — the capability menu: ~2-3k at start, bodies load on use. <b>Bare</b> — 6 basic tools, no skills, no sub-agents; overrides the rest. Both off = full tools without the skills menu.",
  mine_suffix:" — mine",
- refresh_tip:"Full dashboard refresh — settings, profiles, skills, MCP, plus a monitor recompute",refreshed:"Everything refreshed ✓",
+ refresh_tip:"Full dashboard refresh — settings, profiles, skills, MCP, plus a monitor recompute",refreshed:"Everything refreshed ✓",acct_tip:"Active Claude account: every page and every new session use its config folder",acct_switched:"Switched to {n}",acct_names:"Account names",acct_names_tip:"The name shown in the account switcher in the top bar. Empty = the folder name.",
  limits_age:"as of {t} ago",limits_now:"live",
  limits_src_tip:"Quota numbers come from Claude Code itself (the /usage payload via the status line) — they update only while a Claude session is open. No open session = the number stays from the last moment one was.",
  add_mcp:"+ New server",mcp_add_t:"Add MCP server",mcp_name:"Name (a-z, dashes)",mcp_kind:"Type",mcp_http:"Hosted HTTP (incl. OAuth)",mcp_stdio:"Local command (stdio)",mcp_url:"https URL",mcp_cmd_l:"Full command",
@@ -848,7 +851,7 @@ en:{
  cd_monitor:"Tokens and cost by day, model and project.",
  cd_manage:"Rules, skills and files, model, MCP, hooks, plugins.",
  cd_guide:"What each part does, and what to do when something breaks.",
- upd_ago:"Updated {n}s ago · updates by itself",live_5s:"Live · every 5 seconds",check_now:"Check now",
+ auto_sync:"Auto-sync",sync_fail:"Sync failed · last synced {t}",sync_never:"never",live_5s:"Live · every 5 seconds",check_now:"Check now",
  lang_tip:"עברית",power_tip:"Shut down the dashboard server",
  checking:"Checking the system…",all_ok:"All good",all_ok_sub:"All sessions are running and connected.",attention:"Attention",
  issues_1:"1 issue",issues_n:"{n} issues",can_auto:"can be fixed automatically",need_you:"needs your action",
@@ -1434,11 +1437,20 @@ function renderTopbar(){
 function renderTopStatus(){
   const el=$("tbStatus");if(!el)return;
   const p=activeTab;
-  if((p==="home"||p==="sessions")&&rcErr){
+  delete el.dataset.tip;
+  if(p==="home"){
+    // green/red dot; the failure tooltip says how long since the last good sync
+    el.className="tb-status";
+    if(rcErr)el.dataset.tip=t("sync_fail").replace("{t}",rcTs?rel(rcTs):t("sync_never"));
+    const html=rcTs||rcErr?`<span class="dot ${rcErr?"bad":"ok"}"></span>${esc(t("auto_sync"))}`:"";
+    if(el.dataset.h!==html){el.innerHTML=html;el.dataset.h=html;}   // keep the node: hover stays put
+    return;
+  }
+  el.dataset.h="";
+  if(p==="sessions"&&rcErr){
     el.className="tb-status err";el.innerHTML=`${ic("bad")} ${t("no_server")}`;return;}
   el.className="tb-status";
-  if(p==="home")el.textContent=rcTs?t("upd_ago").replace("{n}",Math.max(0,Math.round((Date.now()-rcTs)/1000))):"";
-  else if(p==="sessions"||p==="logs")el.innerHTML=`<span class="dot ok live"></span>${t("live_5s")}`;
+  if(p==="sessions"||p==="logs")el.innerHTML=`<span class="dot ok live"></span>${t("live_5s")}`;
   else el.textContent="";
 }
 
@@ -2034,9 +2046,23 @@ function renderAll(){
   $("cCwd").value=keepCwd;$("cModel").value=keepModel;
   $("cSkills").checked=keepSkills;$("cBare").checked=keepBare;
   updCmd();
-  renderAccount();renderSettings();renderFiles();renderMcp();renderHooks();
+  renderAcctSel();renderAccount();renderSettings();renderFiles();renderMcp();renderHooks();
   renderRules();renderSkills();renderDesktop();renderDashCfg();
   renderCards();if(activeTab==="home")renderTopbar();
+}
+// account switcher: one entry per Claude config folder (~/.claude, ~/.claude-*)
+function renderAcctSel(){
+  const a=S.accounts||[],sel=$("acctSel");
+  sel.hidden=a.length<2;sel.title=t("acct_tip");sel.setAttribute("aria-label",t("acct_tip"));
+  sel.innerHTML=a.map(x=>`<option value="${esc(x.dir)}"${x.active?" selected":""}>${esc(x.name)}</option>`).join("");
+}
+async function switchAccount(dir){
+  const j=await api("/api/account",{dir}).catch(()=>null);
+  if(!j){renderAcctSel();return;}
+  const a=(S.accounts||[]).find(x=>x.active);
+  M=null;SR.res=null;SR.ran="";FALLEN=null;
+  loadRc();route(true);loadFallen();
+  toast(t("acct_switched").replace("{n}",a?a.name:dir));
 }
 function presetCard(p){
   const name=p.custom?p.name:(I18N[L]["bp_"+p.id+"_n"]||p.name);
@@ -2304,6 +2330,11 @@ function renderDashCfg(){
         <input type="text" id="cfgCode" dir="ltr" value="${esc(S.config.code_dir||"")}" placeholder="~/projects">
         <button onclick="api('/api/config',{code_dir:$('cfgCode').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
       <div class="hint">${n?t("repos_found").replace("{n}",n):t("no_code_dir")}</div></div></div>`
+   +((S.accounts||[]).length>1?`<div class="row"><div><div class="name">${t("acct_names")} ${Q("acct_names_tip")}</div>
+      ${S.accounts.map((a,i)=>`<div class="field-inline">
+        <input type="text" id="acctName${i}" value="${esc(a.name)}" placeholder="${esc(a.folder)}" maxlength="40">
+        <button onclick="api('/api/account/name',{dir:S.accounts[${i}].dir,name:$('acctName${i}').value}).then(()=>toast(t('saved')))">${t("save_btn")}</button></div>
+      <div class="hint" dir="ltr">${esc(a.folder)}</div>`).join("")}</div></div>`:"")
    +mrow(`${t("alias_row")} ${Q("alias_tip")}`,`<span class="cmd" title="alias cl-dash='python3 ~/.claude/dashboard/server.py'">alias cl-dash='python3 ~/.claude/dashboard/server.py'</span>`,
       S.alias_installed?`<span class="tag t-live">${t("alias_installed")}</span>`
         :`<button class="sm primary" onclick="api('/api/install-alias',{}).then(()=>toast(t('saved')))">${t("alias_install")}</button>`,"trunc");
