@@ -38,7 +38,8 @@
   .wrap{max-width:1344px;margin:0 auto;width:100%;min-width:0}
   .narrow{max-width:1040px;margin-inline:auto}
   .ic{width:18px;height:18px;flex:none;vertical-align:middle}
-  [dir="ltr"] .ic.ltr-flip,[dir="rtl"] .ic.rtl-flip{transform:scaleX(-1)}
+  /* :dir() follows the nearest dir attribute; [dir=rtl] also matched <html dir=rtl> in English */
+  .ic.ltr-flip:dir(ltr),.ic.rtl-flip:dir(rtl){transform:scaleX(-1)}
   a{color:inherit}
   .page{display:none;min-width:0} .page.on{display:block}
   section{background:var(--card);border:1px solid var(--line);border-radius:12px;
