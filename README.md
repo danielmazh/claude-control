@@ -190,6 +190,34 @@ Other POST actions used by the pages: `/api/model`, `/api/plugin`, `/api/sounds`
 `/api/remote-control`, `/api/mcp-server/add`, `/api/file/create`, `/api/open`,
 `/api/shutdown`.
 
+Every POST must carry an allowed `Host` and `Origin`, see [Security](#security). A script
+must send them itself: `curl -H 'Origin: http://127.0.0.1:7799' -d '{}' http://127.0.0.1:7799/api/...`.
+
+## Security
+
+The server listens on `127.0.0.1` only. It accepts a POST only with:
+
+- `Host`: `127.0.0.1:<port>` or `localhost:<port>`,
+- `Origin`: `http://` plus one of those hosts, or `chrome-extension://` plus the id of `extension/`.
+
+Anything else gets a 403 before the body is read, including a missing `Origin`. So another
+website, or a foreign name that points to 127.0.0.1, cannot start a session or change a file.
+GET requests are not checked.
+
+The extension id is fixed by the public `key` in `extension/manifest.json`. The private key
+was thrown away; it is not needed to load the extension unpacked. If you change the key,
+change `EXTENSION_ID` in `server.py` too.
+
+Tests: `python3 -m unittest discover -s tests`.
+
+### Upgrade to this version
+
+1. Run `./install.sh` again.
+2. In `chrome://extensions`, remove Claude Control, then **Load unpacked** the `extension/`
+   folder again. The id changes once, so the old copy gets a 403 on actions. The popup
+   forgets its saved language and target.
+3. Your own scripts that POST to the server must now send `Origin` (see API above).
+
 ## Sharing this tool
 
 Ship the repo files only. The runtime files (`presets.json`, `config.json`,

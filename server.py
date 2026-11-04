@@ -49,6 +49,10 @@ SESSION_RULES = DATA / ".session-rules.md"
 DESKTOP_CFG = HOME / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
 PROJECTS = CL / "projects"
 PORT = int(os.environ.get("CC_PORT") or 7799)
+# The server listens on this machine only. Never change this to 0.0.0.0.
+BIND_HOST = "127.0.0.1"
+# Fixed id of extension/ (from the "key" in its manifest.json, see README).
+EXTENSION_ID = "hlflnlhdmgekmkkledhngfpjgkifeedh"
 
 # ── language: messages, check titles and issue texts in Hebrew (default) or English.
 # A request sets it with ?lang=en or a JSON field "lang"; it is kept per thread, so
@@ -1789,6 +1793,28 @@ MANIFEST = {"name": "Claude Control", "short_name": "Claude Ctl",
             "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"}]}
 
 
+# ── request guard: POST only from our own page and our own extension ─────────
+# Host stops DNS rebinding (a foreign name that points to 127.0.0.1). Origin stops
+# other sites and other extensions. Browsers always send Origin on POST and a page
+# cannot fake it. No Origin is refused too: such a client must name itself.
+def allowed_hosts():
+    return {f"{BIND_HOST}:{PORT}", f"localhost:{PORT}"}
+
+
+def allowed_origins():
+    return {f"http://{h}" for h in allowed_hosts()} | {f"chrome-extension://{EXTENSION_ID}"}
+
+
+def post_refusal(host_values, origin_values):
+    """Why a POST is refused, or None if it is allowed. Takes all values of each
+    header: a missing or repeated header is refused. Match is exact, never a prefix."""
+    if len(host_values) != 1 or host_values[0] not in allowed_hosts():
+        return "host"
+    if len(origin_values) != 1 or origin_values[0] not in allowed_origins():
+        return "origin"
+    return None
+
+
 # ── http ─────────────────────────────────────────────────────────────────────
 class H(BaseHTTPRequestHandler):
     server_ref = None
@@ -1860,6 +1886,11 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         self._lang_from_query()
         self.path = self.path.split("?", 1)[0]
+        refusal = post_refusal(self.headers.get_all("Host") or [],
+                               self.headers.get_all("Origin") or [])
+        if refusal:                          # before the body is read or anything runs
+            return self._json(403, {"error": tr("הבקשה נחסמה: מקור לא מורשה",
+                                                f"Request refused: {refusal} not allowed")})
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n) or b"{}")
@@ -1969,17 +2000,17 @@ class H(BaseHTTPRequestHandler):
 
 def port_in_use():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", PORT)) == 0
+        return s.connect_ex((BIND_HOST, PORT)) == 0
 
 
 if __name__ == "__main__":
-    url = f"http://127.0.0.1:{PORT}"
+    url = f"http://{BIND_HOST}:{PORT}"
     if port_in_use():
         print(f"Claude Control already running · {url} — opening browser")
         if not os.environ.get("CC_NO_BROWSER"):
             webbrowser.open(url)
         raise SystemExit(0)
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
+    srv = ThreadingHTTPServer((BIND_HOST, PORT), H)
     H.server_ref = srv
     print(f"Claude Control · {url}  (Ctrl-C or the ⏻ button to stop)")
     if not os.environ.get("CC_NO_BROWSER"):            # CC_NO_BROWSER=1: dev/headless run

@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Claude Control",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsMS9NT7yb6RluTxkaiTbuCV7Gg74ROVAGkFM5r5mjalPDXOx9OtukB+3QyQzBjhxC5xcyfZewSL42gkgske0D5ujvnhKQZtNlBDQYvoeo1f657+lXbHTH8/CulyJqaikA3MC9AC3Q+w1DJh0ss5/Lk323gucQzVm/gYhCV96oxLLtOAYzzU1bh1HRjPtIxKtfWpkp6MKMvH/OpB8RDxxxCS6HljgB6gAiapxYnhrA066B/qNrbdW/t2W7FSTDYV0mWUXBhdVd6vFF+gIQ35a1jV+VRKSif9msNYU1ZpU0Jb1ZEyRiBxy1MP/E+Ph8DYvbL39A4ViEH9ISAtKknxShwIDAQAB",
   "description": "Quick actions for your local Claude Control dashboard — launch sessions, check quotas, expand to the full page.",
   "action": {
     "default_popup": "popup.html",
