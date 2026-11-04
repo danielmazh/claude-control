@@ -1,9 +1,9 @@
-"""Tests for the POST guard in server.py. Standard library only.
+"""Tests for the GET and POST guard in server.py. Standard library only.
 
 Run from the repo root: python3 -m unittest discover -s tests
 
 HOME and CC_DATA point to a temp folder before the import, so nothing here can
-read or change a real ~/.claude. No socket is opened: do_POST is called directly.
+read or change a real ~/.claude. No socket is opened: do_GET and do_POST are called directly.
 """
 import base64, hashlib, io, json, os, sys, tempfile, unittest
 from email.message import Message
@@ -130,6 +130,85 @@ class DoPost(unittest.TestCase):
         status, _, _ = call_post("/api/sounds?lang=en", [("Host", HOST), ("Origin", "null")])
         self.assertEqual(status, 403)
         self.assertFalse(server.SOUNDS_OFF_FLAG.exists())
+
+
+def call_get(path, headers):
+    """Run H.do_GET on a bare handler, without a socket."""
+    h = server.H.__new__(server.H)
+    h.path = path
+    h.request_version = "HTTP/1.1"
+    h.requestline = "GET " + path + " HTTP/1.1"
+    h.client_address = ("127.0.0.1", 1)
+    h.headers = Message()
+    for k, v in headers:
+        h.headers[k] = v
+    h.wfile = io.BytesIO()
+    h.do_GET()
+    raw = h.wfile.getvalue()
+    return int(raw.split(b" ", 2)[1]), raw.split(b"\r\n\r\n", 1)[1]
+
+
+class DoGet(unittest.TestCase):
+    REFUSED = ([("Host", "evil.example:7799")],
+               [("Host", "evil.example")],
+               [("Host", "127.0.0.1")],
+               [("Host", "127.0.0.1:80")],
+               [("Host", "127.0.0.1:7799.evil.example")],
+               [("Host", HOST), ("Host", "evil.example")],
+               [("Host", "evil.example:7799"), ("Origin", PAGE)],
+               [])
+
+    def setUp(self):
+        self.reads = []
+        def record(name, value):
+            def fn(*a, **k):
+                self.reads.append(name)
+                return value
+            return fn
+        for name in ("state", "monitor", "doctor", "rc_status", "session_search", "rc_logs"):
+            p = mock.patch.object(server, name, record(name, {}))
+            p.start()
+            self.addCleanup(p.stop)
+        q = mock.patch.object(server, "qr_svg", record("qr_svg", b"<svg/>"))
+        q.start()
+        self.addCleanup(q.stop)
+
+    def test_allowed_hosts_without_origin(self):
+        for host in (HOST, "localhost:7799"):
+            for path in ("/", "/index.html", "/icon.svg", "/manifest.json", "/api/state"):
+                with self.subTest(host=host, path=path):
+                    status, _ = call_get(path, [("Host", host)])
+                    self.assertEqual(status, 200)
+
+    def test_extension_origin_is_served(self):
+        status, _ = call_get("/api/state", [("Host", HOST), ("Origin", EXT)])
+        self.assertEqual(status, 200)
+
+    def test_refused_hosts_get_nothing(self):
+        for path in ("/", "/index.html", "/icon.svg", "/manifest.json", "/api/state", "/api/monitor",
+                     "/api/doctor", "/api/rc/status?force=1", "/api/sessions/search?q=a",
+                     "/api/logs", "/api/qr?text=a", "/nope"):
+            for headers in self.REFUSED:
+                with self.subTest(path=path, headers=headers):
+                    status, body = call_get(path, headers)
+                    self.assertEqual(status, 403)
+                    self.assertIn("error", json.loads(body))
+                    self.assertEqual(self.reads, [])
+
+    def test_monitor_force_keeps_cache_on_refused_host(self):
+        server.MONITOR_CACHE.write_text("{}")
+        self.addCleanup(server.MONITOR_CACHE.unlink, missing_ok=True)
+        for headers in self.REFUSED:
+            with self.subTest(headers=headers):
+                status, _ = call_get("/api/monitor?force=1", headers)
+                self.assertEqual(status, 403)
+                self.assertTrue(server.MONITOR_CACHE.exists())
+
+    def test_monitor_force_still_works_on_allowed_host(self):
+        server.MONITOR_CACHE.write_text("{}")
+        status, _ = call_get("/api/monitor?force=1", [("Host", HOST)])
+        self.assertEqual(status, 200)
+        self.assertFalse(server.MONITOR_CACHE.exists())
 
 
 class Fixed(unittest.TestCase):
