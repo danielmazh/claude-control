@@ -1790,8 +1790,39 @@ MANIFEST = {"name": "Claude Control", "short_name": "Claude Ctl",
 
 
 # ── http ─────────────────────────────────────────────────────────────────────
+# The server has no login, so it accepts only requests that a web page on another site
+# cannot make: the Host must be this server (blocks DNS rebinding), and a POST must come
+# from this page, the browser extension, or a non-browser client (no Origin header), with
+# Content-Type application/json (a cross-site page cannot send that without a CORS
+# preflight, and this server answers no preflight).
+ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+ALLOWED_ORIGINS = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
+
+
+def request_blocked(headers, post):
+    """Return (status, reason) if the request must be refused, else None."""
+    if (headers.get("Host") or "").strip().lower() not in ALLOWED_HOSTS:
+        return 403, "bad host"
+    if post:
+        origin = headers.get("Origin")
+        if origin is not None and origin not in ALLOWED_ORIGINS \
+                and not origin.startswith("chrome-extension://"):
+            return 403, "bad origin"
+        ctype = (headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if ctype != "application/json":
+            return 415, "content-type must be application/json"
+    return None
+
+
 class H(BaseHTTPRequestHandler):
     server_ref = None
+
+    def _refuse(self, post):
+        bad = request_blocked(self.headers, post)
+        if bad:
+            self._json(bad[0], {"ok": False, "error": bad[1]})
+            return True
+        return False
 
     def log_message(self, *a):
         pass
@@ -1812,6 +1843,8 @@ class H(BaseHTTPRequestHandler):
         set_lang((parse_qs(urlparse(self.path).query).get("lang") or ["he"])[0])
 
     def do_GET(self):
+        if self._refuse(post=False):
+            return
         self._lang_from_query()
         route = self.path.split("?", 1)[0]
         if self.path == "/" or self.path.startswith("/index"):
@@ -1858,6 +1891,8 @@ class H(BaseHTTPRequestHandler):
             self._json(404, {"error": "not found"})
 
     def do_POST(self):
+        if self._refuse(post=True):
+            return
         self._lang_from_query()
         self.path = self.path.split("?", 1)[0]
         try:

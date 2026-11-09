@@ -38,7 +38,7 @@ function setLang(l) {
 }
 
 async function api(path, body) {
-  const r = await fetch(API + path, body ? { method: "POST", body: JSON.stringify(body) } : {});
+  const r = await fetch(API + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   const j = await r.json();
   if (j.error) { toast(t("err") + j.error); throw j.error; }
   if (j.state) S = j.state;

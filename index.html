@@ -943,10 +943,11 @@ document.addEventListener("mouseover",e=>{
 // every API call carries the UI language: server messages, check titles and issues come back in it
 const lq=u=>u+(u.includes("?")?"&":"?")+"lang="+L;
 const lb=b=>JSON.stringify({...(b||{}),lang:L});
+const JH={"Content-Type":"application/json"};
 // optional parts of this machine (server: features). Unknown yet = assume present.
 function F(k){const f=(RC&&RC.features)||(S&&S.features);return f?f[k]!==false:true;}
 async function api(path,body){
-  const r=await fetch(body?path:lq(path),body?{method:"POST",body:lb(body)}:{});
+  const r=await fetch(body?path:lq(path),body?{method:"POST",headers:JH,body:lb(body)}:{});
   const j=await r.json();
   if(j.error){toast(t("err")+j.error);throw j.error;}
   if(j.state){S=j.state;renderAll();}
@@ -1006,7 +1007,7 @@ function showRemote(tmuxTarget){
 }
 function shutdown(){
   if(!confirm(t("confirm_off")))return;
-  fetch("/api/shutdown",{method:"POST",body:"{}"}).finally(()=>{
+  fetch("/api/shutdown",{method:"POST",headers:JH,body:"{}"}).finally(()=>{
     document.body.innerHTML=`<main style="text-align:center;padding-top:18vh;font-family:inherit">
       <h1 style="font-size:1.3rem">${t("off_t")}</h1>
       <p style="color:var(--muted);margin-top:.6rem">${t("off_h")} <code>python3 ~/.claude/dashboard/server.py</code></p></main>`;
@@ -1568,7 +1569,7 @@ async function rcAct(body,btn,confirmKey){
   if(confirmKey&&!(await askConfirm(t(confirmKey).replace("{n}",body.name||""))))return;
   setBusy(btn,true);
   try{
-    const r=await fetch("/api/rc/action",{method:"POST",body:lb(body)});
+    const r=await fetch("/api/rc/action",{method:"POST",headers:JH,body:lb(body)});
     const j=await r.json().catch(()=>({}));
     const ok=r.ok&&j.ok!==false&&!j.error;
     const failed=arr(j.results).filter(x=>x&&x.ok===false).map(x=>x.step+(x.detail?": "+x.detail:""));
@@ -1906,7 +1907,7 @@ async function doResume(btn){
   let ok=false;
   try{
     const body={uuid:resumeUuid,name};if(resumeDry)body.dry=true;
-    const r=await fetch("/api/sessions/resume",{method:"POST",body:lb(body)});
+    const r=await fetch("/api/sessions/resume",{method:"POST",headers:JH,body:lb(body)});
     const j=await r.json().catch(()=>({}));
     ok=r.ok&&j.ok!==false&&!j.error;
     const failed=arr(j.results).filter(x=>x&&x.ok===false).map(x=>x.step+(x.detail?": "+x.detail:""));
@@ -2082,7 +2083,7 @@ function updCmd(){
   $("cntRules").textContent=getChecked("rl").length;
   clearTimeout(cmdTimer);
   cmdTimer=setTimeout(async()=>{
-    const r=await fetch("/api/launch",{method:"POST",
+    const r=await fetch("/api/launch",{method:"POST",headers:JH,
       body:lb({custom:customSpec(),target:{type:"terminal"},dry:true})});
     const j=await r.json();
     if(j.cmd){$("customCmd").textContent=j.cmd;$("customCmd").dataset.full=j.cmd;
